@@ -7,7 +7,7 @@ library(lubridate)
 library(dplyr)
 library(data.table) 
 #directory containing inputs
-setwd("\\\\HOME/stewcc1/MenAModel/data/ModelInputs")
+setwd("\\\\HOME/stewcc1/MenAModel/Rdata")
 mycountry <- "ETH"
 start <- as.Date("2001-01-01")
 end <- as.Date("2100-12-31")
@@ -272,7 +272,7 @@ for (n in 1:nSims) {
     #summarize incident cases by year
     inclong$IterYear<-year(inclong$RealDate)
     inclong$AgeInYears<-floor((inclong[,1]-1)/12)
-    res<-inclong%>%filter(IterYear>2000)%>%group_by(IterYear,AgeInYears)%>%summarize(Cases=sum(value))
+    res<-inclong%>%filter(IterYear>2000)%>%dplyr::group_by(IterYear,AgeInYears)%>%dplyr::summarize(Cases=sum(value))
     #split into under or over 30
     #over 30 generate a data frame with age 30-70, and cases sumingroup/41, for each yearly row
     over30<-res[res$AgeInYears==30,]
@@ -298,8 +298,8 @@ for (n in 1:nSims) {
       cohortlong$AgeInYears<-floor((cohortlong[,1]-1)/12)
       #pick last day of july per year for calculating cohort size  #WHERE MONTH(date) = 7 AND DAY(date) >= 25;
       cohortsample<-cohortlong[month(cohortlong$RealDate)==7 & day(cohortlong$RealDate)>24,]
-      cohortsizes<-cohortsample%>%group_by(IterYear, AgeInYears)%>%summarize(cohortsize=sum(value))
-      totalPop<-cohortsizes%>%group_by(IterYear)%>%summarize(tot=sum(cohortsize))
+      cohortsizes<-cohortsample%>%dplyr::group_by(IterYear, AgeInYears)%>%dplyr::summarize(cohortsize=sum(value))
+      totalPop<-cohortsizes%>%dplyr::group_by(IterYear)%>%dplyr::summarize(tot=sum(cohortsize))
     }
   } #end of conditional summarization
   pop<-emptypop
@@ -320,7 +320,7 @@ for (n in 1:nSims) {
 allsims <- rbindlist(my_data)
 str(allsims)
 if (nSims>1) {
-  simsummary <-allsims%>%select(IterYear, AgeInYears, Cases, Deaths, DALYs)%>%group_by(IterYear, AgeInYears)%>%summarize_all(.funs=(mean))
+  simsummary <-allsims%>%dplyr::select(IterYear, AgeInYears, Cases, Deaths, DALYs)%>%dplyr::group_by(IterYear, AgeInYears)%>%dplyr::summarize_all(.funs=(mean))
 } else {
   simsummary<-allsims[, c("IterYear", "AgeInYears", "Cases", "Deaths", "DALYs")]
 }
@@ -330,7 +330,7 @@ finalsummary<-merge(x = simsummary, y = cohortsizes, by = c("IterYear", "AgeInYe
 str(finalsummary)
 head(finalsummary)
 filename = paste0(mycountry, "_", program, "_", Sys.Date(), ".csv")
-outfile<-paste0("\\\\HOME/stewcc1/MenAModel/data/", filename)
+outfile<-paste0("\\\\HOME/stewcc1/MenAModel/Rdata/", filename)
 write.csv(finalsummary, outfile)
 print(begin)
 #print(endsim)

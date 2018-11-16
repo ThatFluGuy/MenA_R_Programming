@@ -10,7 +10,6 @@
 #   with Cases, Deaths, Dalys by year and year of age.                        #
 #	SummarizeForOutput : takes a list of products of summarizeOneSim and        #  
 #   calculates mean over all simulations; writes output file                  #
-#`Vaccinate: Called by MenA_OneSim according to which program is specified    #
 #_____________________________________________________________________________#
 #_____________________________________________________________________________#
 # Created as functiosn 3/8/18, by Chris Stewart stewart.c@ghc.org             #
@@ -76,6 +75,7 @@ summarizeForOutput<-function(results_list, cohort, write, filename) {
   if (write==TRUE){
     outfile<-paste0("\\\\HOME/stewcc1/MenAModel/data/", filename)
     write.csv(finalsummary, outfile)
+    print(paste("Output written to", outfile))
   }
   return(finalsummary)
 }

@@ -24,21 +24,61 @@
 
 
 #_____________________________________________________________________________#
+# This function does not work from KPWA network but tested from my laptop     #
+# 11/16/18, "downloads the 5 data files we need by reading into dataframe     # 
+#    then writing csv to the directory specified.  Reconstructs near-real     #
+# filenames(compared to manual download),will be recognized by downstream fxn #
+# requires R package "montagu", install with:                                 #
+# install.packages("drat") # if needed                                        #
+# drat:::add("vimc")                                                          #
+# install.packages("montagu")                                                 #
+#_____________________________________________________________________________#
+
+GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710gavi-5", destpath=NULL) {
+  #does not work from KPWA network but tested from my laptop
+ 
+  #username and password for montagu site
+  svr<-montagu_server(name="production", hostname="montagu.vaccineimpact.org", username=username, password=password)
+  montagu_server_global_default_set(svr)
+  tchlist<-montagu_touchstones_list(svr)
+  if (touchstone %in% as.vector(tchlist$id)) {
+    dlist<-montagu_demographics_list(touchstone_id = touchstone)
+    demogidlist<-as.vector(dlist$id)
+    needed_data<-c("cbr", "cdr", "unwpp_imr", "qq_pop", "tot_pop")
+    for (i in 1:length(needed_data)) { 
+      if (needed_data[i] %in% demogidlist) {
+        dat<-montagu::montagu_demographic_data(type=needed_data[i], touchstone_id=tch)
+        datrow<-dlist[dlist$id==needed_data[i],]
+        #filename like: 201710gavi-5_dds-201710_unwpp_imr_both.csv
+        # [touchstone id + source + demog id + _both]
+        #but it doesn't matter, my function lookst for demog id in name
+        if (length(destpath)>0) {
+          filename<-paste0(datadir, touchstone, datrow$source, datrow$id, "_both.csv")
+          write.csv(dat, filename)
+          print(filename)
+        }
+      }
+    }
+  } 
+  else {print("Touchstone not found.  Touchstone list:")
+    print(tchlist)
+  }
+}
+
+#_____________________________________________________________________________#
 # This function returns a dataset with a row for each year of simulation,     #
 # with total pop, death rate, birth rate, and infant mortality rate           # 
 #       ASSUMES FILENAMES CONTAIN: "cdr_both", "cbr_both" and "imr_both"      #
 #_____________________________________________________________________________#
 
-GetDemographicParameters<-function(directory, mycountry, start, end, fillThreshold=1) {
+GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1) {
   library(dplyr)
   library(lubridate)
-  setwd("\\\\HOME/stewcc1/MenAModel/R_programming")
-  source("ModelInputUtilities.R")
   setwd(path)
   flist<-list.files(path)
   totpop<-flist[grepl("tot_pop_both",flist)==TRUE]
   #check length of totpop to validate filename
-  dfpop<-read.csv(totpop[1])
+  dfpop<-read.csv(totpop)
   #check nrow(ctrypop to validate country)
   #validate country with total pop file;
   ctrypop<-dfpop[dfpop$country_code==mycountry, c("country_code", "country", "year","gender", "value")]
@@ -129,8 +169,9 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
 #_____________________________________________________________________________#
 # This function returns a vector with 7 values, one for each 5-year age       #
 #  band up to 30, calculated from quinquennial file, for the year closest to  #
-#  specified start of simulation.                                             #
+#  specified start of simulation. Added names=age band 11/15/18               #
 #  ASSUMES FILENAME CONTAINS "qq_pop_both"                                    #
+#  Called by InitializePopulation.R                                           #
 #_____________________________________________________________________________#
 GetPopAgeDist<-function(mycountry, start, directory) {
   setwd(path)
@@ -149,7 +190,9 @@ GetPopAgeDist<-function(mycountry, start, directory) {
   numsall<-merge(x=bands, y=totpop, by="country_code")
   numsall$fraction<-numsall$tot/numsall$totpop
   agedist <- numsall[order(numsall$minage),]
-  return(agedist$fraction)
+  dist<-agedist$fraction
+  names(dist)<-agedist$ageband
+  return(dist)
 }
 
 
@@ -183,4 +226,43 @@ GetVaccScenario<-function(mycountry, scenario, directory) {
   #if (scenario=="none") {
    # newdf<-newdf[newf$country_code=="XXX",]
   #}
+}
+
+GetDiseaseStateDist<-function(directory, region) {
+  setwd(directory)
+  dist<-read.csv("dist_both.csv", stringsAsFactors = TRUE)
+  distcol<-ifelse(region=='hyper', 4, 3)
+  statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
+  return(statefract)
+}
+#_____________________________________________________________________________#
+# Functions called by MenA_simple3D                                           #
+# Contents:                                                                   #
+# Get WAIFWmatrix: Read matrix from input data folder, format for use in      #
+#  simulation, using expandWAIFW.  Called by MenA_VaccSims.R, returns matrix  #
+#	expandWaifw : Ucalled by GetWAIFWmatrix: Expand WAIFW matrices              #
+#      to match monthlypopulation length, output is used by MenA_OneSim       #
+#_____________________________________________________________________________#
+expandWaifw<-function(waifw){
+  # repeat what was originally columns :
+  #b[x,1] 60x; b[x,2] 96x; b[1,3] 84x; b[1,4] 120x
+  #needs to go to 361 - add extra line at end for last big bucket
+  rbind ( 
+    matrix(data=waifw[c(1,5,9,13)], nrow=60, ncol=4, byrow=TRUE),
+    matrix(data=waifw[c(2,6,10,14)], nrow=96, ncol=4, byrow=TRUE),
+    matrix(data=waifw[c(3,7,11,15)], nrow=84, ncol=4, byrow=TRUE),
+    matrix(data=waifw[c(4,8,12,16)], nrow=121, ncol=4, byrow=TRUE)
+  )
+  
+}
+
+GetWAIFWmatrix<-function(path, region) {
+  setwd(path)
+  waifwin<-read.csv("WAIFW_both.csv", stringsAsFactors = FALSE)  #vector
+  Rwaifw<-waifwin[waifwin$region==region & waifwin$season=='rainy', 4]
+  Dwaifw<-waifwin[waifwin$region==region & waifwin$season=='dry', 4]
+  wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
+  dimnames(wboth)[[3]]<-c("rainy", "dry")
+  return(wboth)
+  
 }

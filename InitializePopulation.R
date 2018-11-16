@@ -18,22 +18,25 @@
 # 30 age group only needs one value in input vectors                          #           
 #_____________________________________________________________________________#
 
-InitializePopulation<-function(start, end, popsize, country="ETH", region="not_hyper") {
+InitializePopulation<-function(path, start, end, popsize, country="ETH", region="not_hyper") {
   #create the matrix
   dur<- ceiling(difftime(end, start, units = "weeks"))
   poparray <- array(data=0, dim=c(361, 9, dur+1)) # Dimensions are [age groups, states, time]
   dimnames(poparray)[[2]] <- c("Ns","Nc","Ls","Lc","Hs","Hc","Di","Va", "Inc")
   #parameters for initializing
-  setwd("\\\\HOME/stewcc1/MenAModel/data/ModelInputs")
-  inpop<-read.csv("PopInputAgeDist.csv")
-  mypop<-inpop[inpop$Country==country,]
+  mypop<-GetPopAgeDist(mycountry=country, start=start, directory=path) 
+  #setwd("\\\\HOME/stewcc1/MenAModel/data/ModelInputs")
+  #inpop<-read.csv("PopInputAgeDist.csv")
+  #mypop1<-inpop[inpop$Country==country,]
   ##get age-specific proportions of each disease state into vectors: 7 ages X 7 disease states
-  dist<-read.csv("dist_both.csv", stringsAsFactors = TRUE)
-  distcol<-ifelse(region=='hyper', 4, 3)
+  statefract<-GetDiseaseStateDist(directory=inputdir, region=myregion)
+  #dist<-read.csv("dist_both.csv", stringsAsFactors = TRUE)
+  #distcol<-ifelse(region=='hyper', 4, 3)
+  #statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
   #expand age group fraction as vector to match pop matrix dimension 1
-  agefract <- c(rep(as.numeric(mypop[,c(2:7)]), each=60), as.numeric(mypop[,8]))
+  agefract <- c(rep(as.numeric(mypop[1:6]), each=60), as.numeric(mypop[8]))
   chunks <- c(rep(60, each=360), 1)
-  statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
+ 
   statemx<-rbind(
     matrix(rep(statefract[1:7], each=60), nrow=60),
     matrix(rep(statefract[8:14], each=60), nrow=60),
