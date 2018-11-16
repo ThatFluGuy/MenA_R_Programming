@@ -33,10 +33,9 @@
 # drat:::add("vimc")                                                          #
 # install.packages("montagu")                                                 #
 #_____________________________________________________________________________#
-
 GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710gavi-5", destpath=NULL) {
   #does not work from KPWA network but tested from my laptop
- 
+  #destpath is where you want to put the data - should be same as path in GetDemographicParameters()
   #username and password for montagu site
   svr<-montagu_server(name="production", hostname="montagu.vaccineimpact.org", username=username, password=password)
   montagu_server_global_default_set(svr)
