@@ -24,6 +24,7 @@
 
 
 #_____________________________________________________________________________#
+# PURPOSE: GET DATA FROM API at "montagu.vaccineimpact.org"                   #
 # This function does not work from KPWA network but tested from my laptop     #
 # 11/16/18, "downloads the 5 data files we need by reading into dataframe     # 
 #    then writing csv to the directory specified.  Reconstructs near-real     #
@@ -34,7 +35,7 @@
 # install.packages("montagu")                                                 #
 #_____________________________________________________________________________#
 GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710gavi-5", destpath=NULL) {
-  #does not work from KPWA network but tested from my laptop
+  #GET DATA FROM APIdoes not work from KPWA network but tested from my laptop
   #destpath is where you want to put the data - should be same as path in GetDemographicParameters()
   #username and password for montagu site
   svr<-montagu_server(name="production", hostname="montagu.vaccineimpact.org", username=username, password=password)
