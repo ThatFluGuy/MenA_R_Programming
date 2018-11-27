@@ -52,9 +52,9 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
     #yearly birth, death and imr rates, only needs to when year changes
     if (month(theDate)== 1 & LastMonth==12)
     {
-      births <-countryparams[countryparams$year==year(theDate), 6]/52.1775
-      imr <- countryparams[countryparams$year==year(theDate), 10]/(1000*52.1775)
-      v <- countryparams[countryparams$year==year(theDate), 11] / (1000*52.1775)
+      births <-countryparams[countryparams$year==year(theDate), "births"]/52.1775
+      imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+      v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
       #new imr, need to update wanev and death
       wanev <- c(rep(1-imr, 7), wanev[8:361]) 
       deathvec<-c(rep(imr,12), rep(v, 349))

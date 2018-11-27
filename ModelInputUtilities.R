@@ -81,7 +81,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   dfpop<-read.csv(totpop)
   #check nrow(ctrypop to validate country)
   #validate country with total pop file;
-  ctrypop<-dfpop[dfpop$country_code==mycountry, c("country_code", "country", "year","gender", "value")]
+  ctrypop<-dfpop[dfpop$country_code==mycountry, c("country_code", "country", "year", "value")]
   if (nrow(ctrypop) > 0) {
     ctrypopfull<-checkVIMCdates(mydata=ctrypop, startyr=year(start), endyr=year(end), threshold=1)
     ctrypopfull%>%group_by(country)%>%summarize(min(year), max(year))
@@ -91,7 +91,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   
   cbr<-flist[grepl("cbr_both",flist)==TRUE]
   dfbirth<-read.csv(cbr[1])
-  ctrybirth<-dfbirth[dfbirth$country_code==mycountry, c("country_code", "country", "year","gender", "value")]
+  ctrybirth<-dfbirth[dfbirth$country_code==mycountry, c("country_code", "country", "year", "value")]
   if (nrow(ctrybirth) > 0) {
     ctrybirthfull<-checkVIMCdates(mydata=ctrybirth, startyr=year(start), endyr=year(end), threshold=1)
     ctrybirthfull%>%group_by(country)%>%summarize(min(year), max(year))
@@ -99,7 +99,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
     #message: country not found, exit function
   }
   
-  build1<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "country", "gender", "year"), all=TRUE)
+  build1<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "country", "year"), all=TRUE)
   colnames(build1)[colnames(build1)=="value.x"] <- "totalpop"
   colnames(build1)[colnames(build1)=="value.y"] <- "birthrate"
   build1$births<-build1$totalpop*build1$birthrate
@@ -107,7 +107,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   #keep empty age_from and age_to from imr file to preserve format
   imr<-flist[grepl("imr_both",flist)==TRUE]
   dfim<-read.csv(imr[1])
-  ctryimr<-dfim[dfim$country_code==mycountry, c("country_code", "country", "age_from", "age_to", "year","gender", "value")]
+  ctryimr<-dfim[dfim$country_code==mycountry, c("country_code", "country", "age_from", "age_to", "year", "value")]
   if (nrow(ctryimr) > 0) {
     ctryimrfull<-checkVIMCdates(mydata=ctryimr, startyr=year(start), endyr=year(end), threshold=1)
     ctryimrfull%>%group_by(country)%>%summarize(min(year), max(year))
@@ -115,10 +115,10 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
     #message: country not found, exit function
   }
   
-  build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "country", "gender", "year"), all=TRUE)
+  build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "country", "year"), all=TRUE)
   cdr<-flist[grepl("cdr_both",flist)==TRUE]
   dfcdr<-read.csv(cdr[1])
-  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "country", "year","gender", "value")]
+  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "country", "year", "value")]
   if (nrow(ctrycdr) > 0) {
   ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=1)
   ctrycdrfull%>%group_by(country)%>%summarize(min(year), max(year))
@@ -126,7 +126,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
     #message: country not found, exit function
   }
   
-  build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "country", "gender", "year"), all=TRUE)
+  build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "country",  "year"), all=TRUE)
   colnames(build3)[colnames(build3)=="value.x"] <-"imr"
   colnames(build3)[colnames(build3)=="value.y"] <-"v"
   
@@ -173,7 +173,7 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
 #  ASSUMES FILENAME CONTAINS "qq_pop_both"                                    #
 #  Called by InitializePopulation.R                                           #
 #_____________________________________________________________________________#
-GetPopAgeDist<-function(mycountry, start, directory) {
+GetPopAgeDist<-function(path, mycountry, start) {
   setwd(path)
   flist<-list.files(path)
   qqfile<-flist[grepl("qq_pop_both",flist)==TRUE]

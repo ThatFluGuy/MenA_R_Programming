@@ -6,7 +6,7 @@
 #_____________________________________________________________________________#
 # Output:                                                                     #
 #_____________________________________________________________________________#
-# Author: Chris Stewart chris.c.stewartkp.org 3/2018                          #
+# Author: Chris Stewart chris.c.stewart@kp.org 11/2018                          #
 #    adapted from Mike Jackson's SAS version                                  #
 #_____________________________________________________________________________#
 library(lubridate)
@@ -23,28 +23,29 @@ PSA <- FALSE
 Vaccination<-TRUE
 program <- "campaign" ## "campaign" or "routine" or "both" or "none"
 phi<-0.2
-sd<-456 #seed for random sto
+sd<-456 #seed for random sto, use same for all scenarios
 nSims<-10
+#directory containing inputs from https://montagu.vaccineimpact.org/
+inputdir<-"\\\\HOME/stewcc1/MenAModel/download"
+#directory containing R scripts
+script.dir <- "\\\\home/stewcc1/MenAModel/R_programming"
+#script.dir <- dirname(sys.frame(1)$ofile)
 ###end parameters to set 
 
 #script directory contains functions
-setwd("\\\\HOME/stewcc1/MenAModel/R_programming")
+setwd(script.dir)
 source("ModelInputUtilities.R")
 source("InitializePopulation.R")
 source("MenA_OneSim.R")
 source("MenA_helper_functions.R")
 source("MenA_summarization_functions.R")
 
-#directory containing inputs
-inputdir<-"\\\\HOME/stewcc1/MenAModel/download"
 #country-specific parameters
 myparams<-GetDemographicParameters(path=inputdir,  mycountry=mycountry, start=start, end=end)
 #setwd("\\\\HOME/stewcc1/MenAModel/Rdata")
 #params<-read.csv("country_params.csv")
 #myparams1 <-params[params$country==mycountry & params$year>=year(start)-1 & params$year<=year(end) ,]
 
-#uSE SAME SEED FOR ALL SCENARIOS (for setting up stochastic parameter)
-set.seed(sd, kind = NULL, normal.kind = NULL)
 if (Vaccination!=FALSE) {
   myvacc<-GetVaccScenario(mycountry=mycountry, scenario=program, directory=inputdir)
   #vaccdf <- read.csv("VaxCover_ETH.csv")
@@ -56,6 +57,8 @@ if (Vaccination!=FALSE) {
 }
 
 #fixed parameters
+#uSE SAME SEED FOR ALL SCENARIOS (for setting up stochastic parameter)
+set.seed(sd, kind = NULL, normal.kind = NULL)
 paramfixed<-c(0.23334,0.70002,0.25,0.90,0.75,1.00,0.00000096)
 names(paramfixed)<-c("rc","rd","lc","ld","hc","hd","foii")
 #disease model for rainy and dry
@@ -63,7 +66,7 @@ dxrisk<-rbind(c(0.0018, -0.00000021),
               c(0.0019, -0.0000002))
 dimnames(dxrisk)[[1]]<-c("rainy", "dry")
 #WAIFW matrix setup
-wboth<-GetWAIFWmatrix(path=inputdir, region=myregion)
+wboth<-GetWAIFWmatrix(path=script.dir, region=myregion)
 #waifwin<-read.csv("WAIFW_both.csv", stringsAsFactors = FALSE)  #vector
 #Rwaifw<-waifwin[waifwin$region==myregion & waifwin$season=='rainy', 4]
 #Dwaifw<-waifwin[waifwin$region==myregion & waifwin$season=='dry', 4]
@@ -72,7 +75,7 @@ wboth<-GetWAIFWmatrix(path=inputdir, region=myregion)
 
 #initialize population
 startSize <- myparams[myparams$year==year(start)-1, 5]
-initpop<-InitializePopulation(path=inputdir, start=start, end=end, popsize=startSize, country=mycountry, region=myregion)
+initpop<-InitializePopulation(scriptdir=script.dir, inputdir=inputdir, start=start, end=end, popsize=startSize, country=mycountry, region=myregion)
 #begin simulations
 my_data <- list()
 for (n in 1:nSims) {

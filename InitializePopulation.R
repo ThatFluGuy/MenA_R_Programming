@@ -18,18 +18,18 @@
 # 30 age group only needs one value in input vectors                          #           
 #_____________________________________________________________________________#
 
-InitializePopulation<-function(path, start, end, popsize, country="ETH", region="not_hyper") {
+InitializePopulation<-function(scriptdir, inputdir, start, end, popsize, country="ETH", region="not_hyper") {
   #create the matrix
   dur<- ceiling(difftime(end, start, units = "weeks"))
   poparray <- array(data=0, dim=c(361, 9, dur+1)) # Dimensions are [age groups, states, time]
   dimnames(poparray)[[2]] <- c("Ns","Nc","Ls","Lc","Hs","Hc","Di","Va", "Inc")
   #parameters for initializing
-  mypop<-GetPopAgeDist(mycountry=country, start=start, directory=path) 
+  mypop<-GetPopAgeDist(path=inputdir, mycountry=country, start=start) 
   #setwd("\\\\HOME/stewcc1/MenAModel/data/ModelInputs")
   #inpop<-read.csv("PopInputAgeDist.csv")
   #mypop1<-inpop[inpop$Country==country,]
   ##get age-specific proportions of each disease state into vectors: 7 ages X 7 disease states
-  statefract<-GetDiseaseStateDist(directory=inputdir, region=myregion)
+  statefract<-GetDiseaseStateDist(directory=scriptdir, region=myregion)
   #dist<-read.csv("dist_both.csv", stringsAsFactors = TRUE)
   #distcol<-ifelse(region=='hyper', 4, 3)
   #statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
