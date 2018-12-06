@@ -205,12 +205,13 @@ GetPopAgeDist<-function(path, mycountry, start) {
 GetVaccScenario<-function(mycountry, scenario, directory) {
   setwd(directory)
   flist<-list.files(directory)
-  if (scenario=="routine") {
+  if (scenario=="routine" | scenario=="both") {
     filename<-flist[grepl("mena-routine",flist)==TRUE]
   }
   if (scenario=="campaign") {
     filename<-flist[grepl("mena-campaign",flist)==TRUE]
   }
+  
   #   if (scenario=="none") {
   #    filename<-flist[grepl("mena-no-vacc",flist)==TRUE] #empty file, data types do not match others
   #  }
@@ -220,7 +221,7 @@ GetVaccScenario<-function(mycountry, scenario, directory) {
   colnames(ctryvacc)[colnames(ctryvacc)=="coverage"] <-"CoverRoutine"
   colnames(ctryvacc)[colnames(ctryvacc)=="age_last"] <-"AgeLimCampaign"
   ##target has "<NA>" as character, hosing conversion
-  ctryvacc$DosesCampaign<-as.numeric(ctryvacc$target)
+  ctryvacc$DosesCampaign<-ifelse(is.numeric(ctryvacc$target), as.numeric(ctryvacc$target), 0)
   newdf<-subset(ctryvacc, select=-c(target))
   #better way to make dataset with same structure if we need it:
   #if (scenario=="none") {

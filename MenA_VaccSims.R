@@ -21,10 +21,10 @@ end <- as.Date("2100-12-31")
 myregion <- "not_hyper"
 PSA <- FALSE
 Vaccination<-TRUE
-program <- "campaign" ## "campaign" or "routine" or "both" or "none"
+program <- "both" ## "campaign" or "routine" or "both" or "none"
 phi<-0.2
 sd<-456 #seed for random sto, use same for all scenarios
-nSims<-10
+nSims<-100
 #directory containing inputs from https://montagu.vaccineimpact.org/
 inputdir<-"\\\\HOME/stewcc1/MenAModel/download"
 #directory containing R scripts
@@ -74,7 +74,7 @@ wboth<-GetWAIFWmatrix(path=script.dir, region=myregion)
 #dimnames(wboth)[[3]]<-c("rainy", "dry")
 
 #initialize population
-startSize <- myparams[myparams$year==year(start)-1, 5]
+startSize <- myparams[myparams$year==year(start)-1, "totalpop"]
 initpop<-InitializePopulation(scriptdir=script.dir, inputdir=inputdir, start=start, end=end, popsize=startSize, country=mycountry, region=myregion)
 #begin simulations
 my_data <- list()

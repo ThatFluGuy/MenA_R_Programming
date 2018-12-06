@@ -35,10 +35,11 @@ GetInfectiveRatio<-function(inpop){
 }
 
 vaccinate<-function(popslice, vlookup, type, mydate) {
+  #for type="both", both ifs should execute
   eligibles<-c("Ns","Nc","Ls","Lc","Hs","Hc")
   if ((type=="campaign" | type=="both") & (month(mydate)==10)) {
     #get parameters
-    cDoses <- vlookup[vlookup$year==year(mydate),"DosesCampaign"]
+    cDoses <- vlookup[vlookup$year==year(mydate) & vlookup$activity_type=="campaign","DosesCampaign"]
     #zero-length cDoses (not NA, apparently) is blowing things up
     if (length(cDoses)> 0) {
       if (!is.na(cDoses)) {
@@ -52,8 +53,8 @@ vaccinate<-function(popslice, vlookup, type, mydate) {
     }
   }
   if (type=="routine" | type=="both") {
-    pr <- vlookup[vlookup$year==year(mydate),"CoverRoutine"]
-    if (length(pr)> 0) {
+    pr <- vlookup[vlookup$year==year(mydate) & vlookup$activity_type=="routine","CoverRoutine"]
+    if (length(pr)> 0 & pr>0) {
       if (!is.na(pr)) {
         #routine vaccinations, when subjects turn 9 months- thats 10 here
         popslice[10,"Va"]<- popslice[10,"Va"] + (pr*sum(popslice[10,eligibles]))

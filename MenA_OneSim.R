@@ -14,7 +14,7 @@
 # Move people per WAIFW weekly, age monthly, vaccinate monthly as speficiednnn#
 # fill pop matrix slices 2 thru n                                             #
 #_____________________________________________________________________________#
-# Created as function 3/6/18, by Chris Stewart stewart.c@ghc.org              #
+# Created as function 3/6/18, by Chris Stewart chric.c.stewart@kp.org         #
 # Changes:                                                                    #
 #   WAIFW and dxrisk as small 3D matrices                                     #           
 #_____________________________________________________________________________#
@@ -22,9 +22,9 @@
 MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWmx, dxr) {
   #setup before loop
   theDate <- start
-  births <- countryparams[countryparams$year==year(theDate), 6]/52.1775
-  imr <- countryparams[countryparams$year==year(theDate), 10]/(1000*52.1775)
-  v <- countryparams[countryparams$year==year(theDate), 11] / (1000*52.1775)
+  births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
+  imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+  v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
   deathvec<-c(rep(imr,12), rep(v, 349))
   #waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
   wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA
@@ -61,17 +61,17 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
     }
     
     #  waifw matrix depends on rainy (Mar-Aug) or dry (Sep-Feb) season
-    if (month(theDate)!=LastMonth)
-    {
-      if (month(theDate) %in% c(3,4,5,6,7,8)) { wmx <- WAIFWmx[,,"rainy"]
-      } else { wmx <- WAIFWmx[,,"dry"]
-      }
+    if (month(theDate)!=LastMonth) {
+      if (month(theDate) %in% c(3,4,5,6,7,8)) { 
+        wmx <- WAIFWmx[,,"rainy"]
+      } 
+      else { wmx <- WAIFWmx[,,"dry"]}
       # Determine age-specific per-carrier risk of invasive disease;
       #like infection, this is also seasonal but peaks later, hence different months (rainy here = 6-10 June-Oct)
       iagevec<-seq(0, 360)
-      if (month(theDate) %in% c(1,2,3,4,5,11,12)) {sigma = sigmavec<-dxr["dry",1] + dxr["dry",2] *iagevec
-      } else {sigmavec<-dxr["rainy",1] + dxr["rainy",2] *iagevec
-      }
+      if (month(theDate) %in% c(1,2,3,4,5,11,12)) {
+        sigma = sigmavec<-dxr["dry",1] + dxr["dry",2] *iagevec
+      } else {sigmavec<-dxr["rainy",1] + dxr["rainy",2] *iagevec }
     } #end of updates conditional on month
     
     #infectious ratios by pop age group (for calculating force) this happens every time point

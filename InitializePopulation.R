@@ -34,7 +34,8 @@ InitializePopulation<-function(scriptdir, inputdir, start, end, popsize, country
   #distcol<-ifelse(region=='hyper', 4, 3)
   #statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
   #expand age group fraction as vector to match pop matrix dimension 1
-  agefract <- c(rep(as.numeric(mypop[1:6]), each=60), as.numeric(mypop[8]))
+
+  agefract <- c(rep(as.numeric(mypop[1:6]), each=60), as.numeric(mypop[7]))
   chunks <- c(rep(60, each=360), 1)
  
   statemx<-rbind(
