@@ -1,3 +1,5 @@
+
+
 #### Program information ######################################################
 # Source file name: MenA_VaccSims.R                                           #
 #_____________________________________________________________________________#
@@ -27,6 +29,7 @@ sd<-456 #seed for random sto, use same for all scenarios
 nSims<-100
 #directory containing inputs from https://montagu.vaccineimpact.org/
 inputdir<-"\\\\HOME/stewcc1/MenAModel/download"
+outputdir<-"\\\\HOME/stewcc1/MenAModel/data"
 #directory containing R scripts
 script.dir <- "\\\\home/stewcc1/MenAModel/R_programming"
 #script.dir <- dirname(sys.frame(1)$ofile)
@@ -103,12 +106,12 @@ if (detail > 0) {
   tensims<-rbindlist(my_data[1:10])
   tensimsum<-tensims%>%group_by(simulation, IterYear)%>%summarize(sumCases=sum(Cases))
   sfile = paste0(mycountry, "_tensims_", program, "_", Sys.Date(), ".csv")
-  detfile<-paste0("\\\\HOME/stewcc1/MenAModel/data/", sfile)
+  detfile<-paste0(outputdir, "/", sfile)
   write.csv(tensimsum, detfile)
   print(paste("Simulation detail written to", detfile))
-  
 }
-filename = paste0(mycountry, "_", program, "_", Sys.Date(), ".csv")
-finalsummary<-summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename)
+filename <- paste0(mycountry, "_", program, "_", Sys.Date(), ".csv")
+filename1<- paste0(outputdir, "/", filename)
+finalsummary<-summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
 print(begin)
 print(Sys.time())

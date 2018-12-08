@@ -43,6 +43,7 @@ vaccinate<-function(popslice, vlookup, type, mydate) {
     #zero-length cDoses (not NA, apparently) is blowing things up
     if (length(cDoses)> 0) {
       if (!is.na(cDoses)) {
+      #  print(cDoses)
         #change ages i=12 to 359, here 13 to 360
         eligN <- sum(popslice[13:360, eligibles]) 
         pcNLH <- ifelse(cDoses<=eligN, cDoses/eligN, 1 )
@@ -54,6 +55,7 @@ vaccinate<-function(popslice, vlookup, type, mydate) {
   }
   if (type=="routine" | type=="both") {
     pr <- vlookup[vlookup$year==year(mydate) & vlookup$activity_type=="routine","CoverRoutine"]
+    #print(pr)
     if (length(pr)> 0 & pr>0) {
       if (!is.na(pr)) {
         #routine vaccinations, when subjects turn 9 months- thats 10 here

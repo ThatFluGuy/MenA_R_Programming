@@ -221,7 +221,9 @@ GetVaccScenario<-function(mycountry, scenario, directory) {
   colnames(ctryvacc)[colnames(ctryvacc)=="coverage"] <-"CoverRoutine"
   colnames(ctryvacc)[colnames(ctryvacc)=="age_last"] <-"AgeLimCampaign"
   ##target has "<NA>" as character, hosing conversion
-  ctryvacc$DosesCampaign<-ifelse(is.numeric(ctryvacc$target), as.numeric(ctryvacc$target), 0)
+  #target is "<NA>" where activity type = routine...
+  ctryvacc$DosesCampaign<-ifelse(ctryvacc$activity_type=="routine", 0, as.numeric(ctryvacc$target))
+  #ctryvacc$DosesCampaign<-ifelse(is.numeric(ctryvacc$target), as.numeric(ctryvacc$target), 0)
   newdf<-subset(ctryvacc, select=-c(target))
   #better way to make dataset with same structure if we need it:
   #if (scenario=="none") {

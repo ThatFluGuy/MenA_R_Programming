@@ -73,9 +73,8 @@ summarizeForOutput<-function(results_list, cohort, write, filename) {
   #need to join for cohort size
   finalsummary<-merge(x = simsummary, y = cohort, by = c("IterYear", "AgeInYears")) 
   if (write==TRUE){
-    outfile<-paste0("\\\\HOME/stewcc1/MenAModel/data/", filename)
-    write.csv(finalsummary, outfile)
-    print(paste("Output written to", outfile))
+    write.csv(finalsummary, filename)
+    print(paste("Output written to", filename))
   }
   return(finalsummary)
 }
