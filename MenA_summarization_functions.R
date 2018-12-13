@@ -65,10 +65,13 @@ summarizeOneSim<-function(poparray, n, cfr) {
 summarizeForOutput<-function(results_list, cohort, write, filename) {
   if (length(results_list) > 1) {
     allsims <- rbindlist(results_list)
-    simsummary <-allsims%>%select(IterYear, AgeInYears, Cases, Deaths, DALYs)%>%group_by(IterYear, AgeInYears)%>%summarize_all(.funs=(mean))
+    simmeans <-allsims%>%select(IterYear, AgeInYears, Cases, Deaths, DALYs)%>%group_by(IterYear, AgeInYears)%>%summarize_all(.funs=(mean))
+    simcount<-allsims%>%group_by(IterYear, AgeInYears)%>%summarize(simulations=max(simulation))
+    simsummary <-merge(x=simmeans, y=simcount, by = c("IterYear", "AgeInYears"))
   } else {
     allsims<-results_list
     simsummary<-allsims[, c("IterYear", "AgeInYears", "Cases", "Deaths", "DALYs")]
+    simsummary$simulations<-1
   }
   #need to join for cohort size
   finalsummary<-merge(x = simsummary, y = cohort, by = c("IterYear", "AgeInYears")) 

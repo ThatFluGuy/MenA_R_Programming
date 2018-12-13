@@ -8,7 +8,7 @@
 #_____________________________________________________________________________#
 # Output:                                                                     #
 #_____________________________________________________________________________#
-# Author: Chris Stewart chris.c.stewart@kp.org 11/2018                          #
+# Author: Chris Stewart chris.c.stewart@kp.org 2018                          #
 #    adapted from Mike Jackson's SAS version                                  #
 #_____________________________________________________________________________#
 library(lubridate)
@@ -17,13 +17,13 @@ library(data.table)
 
 ##parameters to set:
 begin<-Sys.time()
-mycountry <- "ETH"
+mycountry <- "ERI"
 start <- as.Date("2001-01-01")
 end <- as.Date("2100-12-31")
 myregion <- "not_hyper"
 PSA <- FALSE
-Vaccination<-TRUE
-program <- "both" ## "campaign" or "routine" or "both" or "none"
+#Vaccination<-TRUE
+vacc_program <- "campaign" ## "campaign" or "routine" or "both" or "none"
 phi<-0.2
 sd<-456 #seed for random sto, use same for all scenarios
 nSims<-100
@@ -49,12 +49,12 @@ myparams<-GetDemographicParameters(path=inputdir,  mycountry=mycountry, start=st
 #params<-read.csv("country_params.csv")
 #myparams1 <-params[params$country==mycountry & params$year>=year(start)-1 & params$year<=year(end) ,]
 
-if (Vaccination!=FALSE) {
-  myvacc<-GetVaccScenario(mycountry=mycountry, scenario=program, directory=inputdir)
+if (vacc_program!="none") {
+  myvacc<-GetVaccScenario(mycountry=mycountry, scenario=vacc_program, directory=inputdir)
   #vaccdf <- read.csv("VaxCover_ETH.csv")
   #myvaccold <- vaccdf[vaccdf$country=='ETH',]
   #make as vector of years where nothing happens (empty except for campaign only) for efficiency
-  if (program=="campaign") {
+  if (vacc_program=="campaign") {
     nodoses<-as.vector(myvacc[is.na(myvacc$DosesCampaign) | myvacc$DosesCampaign==0,"year"])
   }
 }
@@ -84,7 +84,7 @@ my_data <- list()
 for (n in 1:nSims) {
   finalpop<-MenASimulation(startdt=start, enddt=end, pop=initpop,
                            fixedparams=paramfixed, countryparams=myparams,
-                           WAIFWmx=wboth, dxr=dxrisk)
+                           WAIFWmx=wboth, dxr=dxrisk, vacc_program=vacc_program)
   #head(finalpop[,"Inc", 200:225])
   summarizeme<-1
   if (summarizeme > 0) {
@@ -99,18 +99,18 @@ for (n in 1:nSims) {
   } #end of conditional summarization
 } #end of looping nSims simulations
 #final summarization
-filename = paste0(mycountry, "_", program, "_", Sys.Date(), ".csv")
+filename = paste0(mycountry, "_", vacc_program, "_", Sys.Date(), ".csv")
 #detail output - for testing
 detail<-1
 if (detail > 0) {
   tensims<-rbindlist(my_data[1:10])
   tensimsum<-tensims%>%group_by(simulation, IterYear)%>%summarize(sumCases=sum(Cases))
-  sfile = paste0(mycountry, "_tensims_", program, "_", Sys.Date(), ".csv")
+  sfile = paste0(mycountry, "_tensims_", vacc_program, "_", Sys.Date(), ".csv")
   detfile<-paste0(outputdir, "/", sfile)
   write.csv(tensimsum, detfile)
   print(paste("Simulation detail written to", detfile))
 }
-filename <- paste0(mycountry, "_", program, "_", Sys.Date(), ".csv")
+filename <- paste0(mycountry, "_", vacc_program, "_", Sys.Date(), ".csv")
 filename1<- paste0(outputdir, "/", filename)
 finalsummary<-summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
 print(begin)

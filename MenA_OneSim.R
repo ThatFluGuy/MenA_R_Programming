@@ -19,7 +19,7 @@
 #   WAIFW and dxrisk as small 3D matrices                                     #           
 #_____________________________________________________________________________#
 
-MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWmx, dxr) {
+MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWmx, dxr, vacc_program) {
   #setup before loop
   theDate <- start
   births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
@@ -107,16 +107,17 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
         pop[[361,x,j]]<-pop[[361,x,j]] + save361
       } #end of x loop
       #Vaccinate here, monthly
-      if (Vaccination!=FALSE) {
+      if (vacc_program!="none") {
         #there are some cases where theres nothing to do in many years
         if  (program=="campaign") { 
           if (year(theDate) %in% nodoses==FALSE) {
-            pop[,,j] <- vaccinate(pop[,,j], myvacc, program, theDate)
+            pop[,,j] <- vaccinate(popslice=pop[,,j], vlookup=myvacc, type=vacc_program, mydate=theDate)
             #print("vaccinating")
           }
         }
         else {
-          pop[,,j] <- vaccinate(pop[,,j], myvacc, program, theDate)
+          pop[,,j] <- vaccinate(popslice=pop[,,j], vlookup=myvacc, type=vacc_program, mydate=theDate)
+          #print("vaccinating")
         }
       }
     } #end of aging IF

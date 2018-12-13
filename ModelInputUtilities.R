@@ -201,7 +201,11 @@ GetPopAgeDist<-function(path, mycountry, start) {
 # with DosesCampaign, CoverRoutine, and AgeLimCampaign                        # 
 #   NOTE: ASSUMES FILENAMES CONTAIN: "mena-routine" and "mena-routine"        #
 #    NOTE: NOT CURRENTLY LIMITED TO YEARS OF SIM                              #
+#     12/6/18 copying destring from taRifx to deal with "<NA>" in vacc files  #
 #_____________________________________________________________________________#
+destring <- function(x,keep="0-9.-") {
+  return( as.numeric(gsub(paste("[^",keep,"]+",sep=""),"",x)) )
+}
 GetVaccScenario<-function(mycountry, scenario, directory) {
   setwd(directory)
   flist<-list.files(directory)
@@ -222,7 +226,9 @@ GetVaccScenario<-function(mycountry, scenario, directory) {
   colnames(ctryvacc)[colnames(ctryvacc)=="age_last"] <-"AgeLimCampaign"
   ##target has "<NA>" as character, hosing conversion
   #target is "<NA>" where activity type = routine...
-  ctryvacc$DosesCampaign<-ifelse(ctryvacc$activity_type=="routine", 0, as.numeric(ctryvacc$target))
+  #still getting coercion warning
+  ctryvacc$DosesCampaign<-destring(ctryvacc$target)
+  #ctryvacc$DosesCampaign<-ifelse(ctryvacc$activity_type=="routine", 0, as.numeric(ctryvacc$target))
   #ctryvacc$DosesCampaign<-ifelse(is.numeric(ctryvacc$target), as.numeric(ctryvacc$target), 0)
   newdf<-subset(ctryvacc, select=-c(target))
   #better way to make dataset with same structure if we need it:
