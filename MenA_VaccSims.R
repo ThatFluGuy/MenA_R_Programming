@@ -6,53 +6,74 @@
 # PUrpose: run MenA simulations under different vaccination scenarios         #
 #   specify scenario, country, region, and number of simulations to run       #
 #_____________________________________________________________________________#
-# Output:                                                                     #
+# Input: Script builds some inputs from files downloaded                      #
+# from vaccineimpact.org/montagu.  Location of the files is an input parameter#
 #_____________________________________________________________________________#
-# Author: Chris Stewart chris.c.stewart@kp.org 2018                          #
+# Output: two csv files: detailed output of first ten simulations, and        #
+# summarized output of the requested number of simulations                    #
+#_____________________________________________________________________________#
+# Author: Chris Stewart chris.c.stewart@kp.org 2018                           #
 #    adapted from Mike Jackson's SAS version                                  #
 #_____________________________________________________________________________#
 library(lubridate)
 library(dplyr)
-library(data.table)
+library(data.table) #melt
 
 ##parameters to set:
 begin<-Sys.time()
 mycountry <- "ERI"
 start <- as.Date("2001-01-01")
 end <- as.Date("2100-12-31")
-myregion <- "not_hyper"
+myregion <- "hyper"  #"hyper" or "not_hyper"
 PSA <- FALSE
-#Vaccination<-TRUE
-vacc_program <- "campaign" ## "campaign" or "routine" or "both" or "none"
+vacc_program <- "routine" ## "campaign" or "routine" or "both" or "none"
 phi<-0.2
-sd<-456 #seed for random sto, use same for all scenarios
-nSims<-100
+sd<-4567 #seed for random sto, use same for all scenarios
+nSims<-10  #100 takes ~ 3 mon, 1000 takes 45
 #directory containing inputs from https://montagu.vaccineimpact.org/
 inputdir<-"\\\\HOME/stewcc1/MenAModel/download"
 outputdir<-"\\\\HOME/stewcc1/MenAModel/data"
 #directory containing R scripts
 script.dir <- "\\\\home/stewcc1/MenAModel/R_programming"
-#script.dir <- dirname(sys.frame(1)$ofile)
 ###end parameters to set 
 
 #script directory contains functions
+#ha, need to check script.dir so we can source parameter-checking script
+if (dir.exists(script.dir)) {
+  if (file.exists(paste0(script.dir, "/","MenA_paramCheck.R"))==FALSE) {
+    msg<(paste0("MenA_paramcheck.R not found in ", script.dir))
+    stop(msg)
+  }
+} else {
+  script.dir<- getSrcDirectory(function(dummy) {dummy})
+  if (file.exists(paste0(script.dir, "/","MenA_paramCheck.R"))==FALSE) {
+    print(paste0("MenA_paramCheck.R not found in ", script.dir))
+    stop("This script requires 6 other scripts; please put in same directory as this one or specify script directory.")
+  }
+}
 setwd(script.dir)
+source("MenA_paramCheck.R")
 source("ModelInputUtilities.R")
 source("InitializePopulation.R")
 source("MenA_OneSim.R")
 source("MenA_helper_functions.R")
 source("MenA_summarization_functions.R")
+#check parameters set above
+setparams<-as.list(c(mycountry, as.character(start), as.character(end), myregion, PSA, vacc_program, phi, sd, nSims, inputdir, outputdir))
+names(setparams)<-c("mycountry", "start", "end", "myregion", "PSA", "vacc_program", "phi", "sd", "nSims", "inputdir", "outputdir")
+if (CheckSetParameters(setparams)==FALSE) {
+    stop(spmessage)
+} else {
+  if (length(spmessage)>1) {
+    print(spmessage)
+  }
+}
 
 #country-specific parameters
 myparams<-GetDemographicParameters(path=inputdir,  mycountry=mycountry, start=start, end=end)
-#setwd("\\\\HOME/stewcc1/MenAModel/Rdata")
-#params<-read.csv("country_params.csv")
-#myparams1 <-params[params$country==mycountry & params$year>=year(start)-1 & params$year<=year(end) ,]
 
 if (vacc_program!="none") {
   myvacc<-GetVaccScenario(mycountry=mycountry, scenario=vacc_program, directory=inputdir)
-  #vaccdf <- read.csv("VaxCover_ETH.csv")
-  #myvaccold <- vaccdf[vaccdf$country=='ETH',]
   #make as vector of years where nothing happens (empty except for campaign only) for efficiency
   if (vacc_program=="campaign") {
     nodoses<-as.vector(myvacc[is.na(myvacc$DosesCampaign) | myvacc$DosesCampaign==0,"year"])
@@ -70,15 +91,19 @@ dxrisk<-rbind(c(0.0018, -0.00000021),
 dimnames(dxrisk)[[1]]<-c("rainy", "dry")
 #WAIFW matrix setup
 wboth<-GetWAIFWmatrix(path=script.dir, region=myregion)
-#waifwin<-read.csv("WAIFW_both.csv", stringsAsFactors = FALSE)  #vector
-#Rwaifw<-waifwin[waifwin$region==myregion & waifwin$season=='rainy', 4]
-#Dwaifw<-waifwin[waifwin$region==myregion & waifwin$season=='dry', 4]
-#wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
-#dimnames(wboth)[[3]]<-c("rainy", "dry")
+if (!(is.numeric(wboth))) {
+  stop(waifwerr)
+}
 
 #initialize population
 startSize <- myparams[myparams$year==year(start)-1, "totalpop"]
 initpop<-InitializePopulation(scriptdir=script.dir, inputdir=inputdir, start=start, end=end, popsize=startSize, country=mycountry, region=myregion)
+#check for errors
+if (!(is.numeric(initpop))) {
+  if (disterr!="") { print(disterr) } 
+  if (dxerr!="") { print(dxerr) } 
+  stop(initmsg)
+}
 #begin simulations
 my_data <- list()
 for (n in 1:nSims) {

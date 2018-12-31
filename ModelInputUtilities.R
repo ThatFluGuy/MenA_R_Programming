@@ -68,65 +68,58 @@ GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710g
 #_____________________________________________________________________________#
 # This function returns a dataset with a row for each year of simulation,     #
 # with total pop, death rate, birth rate, and infant mortality rate           # 
-#       ASSUMES FILENAMES CONTAIN: "cdr_both", "cbr_both" and "imr_both"      #
+# ASSUMES FILENAMES CONTAIN: "tot_pop_both", "cdr_both", "cbr_both","imr_both"#
 #_____________________________________________________________________________#
 
+
 GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1) {
-  library(dplyr)
-  library(lubridate)
   setwd(path)
   flist<-list.files(path)
   totpop<-flist[grepl("tot_pop_both",flist)==TRUE]
   #check length of totpop to validate filename
+  if (ValidateFilename(path, totpop)==FALSE) { stop(mymsg) }
   dfpop<-read.csv(totpop)
-  #check nrow(ctrypop to validate country)
-  #validate country with total pop file;
-  ctrypop<-dfpop[dfpop$country_code==mycountry, c("country_code", "country", "year", "value")]
-  if (nrow(ctrypop) > 0) {
-    ctrypopfull<-checkVIMCdates(mydata=ctrypop, startyr=year(start), endyr=year(end), threshold=1)
-    ctrypopfull%>%group_by(country)%>%summarize(min(year), max(year))
-  } else {
-    #message: country not found, exit function
-  }
+  #validate country with total pop file
+  if (IsCountryAndColsAvailable(mycountry, dfpop)==FALSE) { stop(countrymsg) }
+  ctrypop<-dfpop[dfpop$country_code==mycountry, c("country_code", "year", "value")]
+  ctrypopfull<-checkVIMCdates(mydata=ctrypop, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  if (is.data.frame(ctrypopfull)==FALSE) { stop(datemsg) }
+  ctrypopfull%>%group_by(country_code)%>%summarize(min(year), max(year))
   
   cbr<-flist[grepl("cbr_both",flist)==TRUE]
+  if (ValidateFilename(path, cbr)==FALSE) { stop(mymsg) }
   dfbirth<-read.csv(cbr[1])
-  ctrybirth<-dfbirth[dfbirth$country_code==mycountry, c("country_code", "country", "year", "value")]
-  if (nrow(ctrybirth) > 0) {
-    ctrybirthfull<-checkVIMCdates(mydata=ctrybirth, startyr=year(start), endyr=year(end), threshold=1)
-    ctrybirthfull%>%group_by(country)%>%summarize(min(year), max(year))
-  } else {
-    #message: country not found, exit function
-  }
-  
-  build1<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "country", "year"), all=TRUE)
+  if (IsCountryAndColsAvailable(mycountry, dfbirth)==FALSE) { stop(countrymsg) }
+  ctrybirth<-dfbirth[dfbirth$country_code==mycountry, c("country_code", "year", "value")]
+  ctrybirthfull<-checkVIMCdates(mydata=ctrybirth, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  if (is.data.frame(ctrybirthfull)==FALSE) { stop(datemsg) }
+  ctrybirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+ 
+  build1<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
   colnames(build1)[colnames(build1)=="value.x"] <- "totalpop"
   colnames(build1)[colnames(build1)=="value.y"] <- "birthrate"
   build1$births<-build1$totalpop*build1$birthrate
   
   #keep empty age_from and age_to from imr file to preserve format
   imr<-flist[grepl("imr_both",flist)==TRUE]
+  if (ValidateFilename(path, imr)==FALSE) { stop(mymsg) }
   dfim<-read.csv(imr[1])
-  ctryimr<-dfim[dfim$country_code==mycountry, c("country_code", "country", "age_from", "age_to", "year", "value")]
-  if (nrow(ctryimr) > 0) {
-    ctryimrfull<-checkVIMCdates(mydata=ctryimr, startyr=year(start), endyr=year(end), threshold=1)
-    ctryimrfull%>%group_by(country)%>%summarize(min(year), max(year))
-  } else {
-    #message: country not found, exit function
-  }
-  
-  build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "country", "year"), all=TRUE)
+  if (IsCountryAndColsAvailable(mycountry, dfim)==FALSE) { stop(countrymsg) }
+  ctryimr<-dfim[dfim$country_code==mycountry, c("country_code", "year", "value")]
+  ctryimrfull<-checkVIMCdates(mydata=ctryimr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  if (is.data.frame(ctryimrfull)==FALSE) { stop(datemsg) }
+  ctryimrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+
+  build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "year"), all=TRUE)
   cdr<-flist[grepl("cdr_both",flist)==TRUE]
+  if (ValidateFilename(path, cdr)==FALSE) { stop(mymsg) }
   dfcdr<-read.csv(cdr[1])
-  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "country", "year", "value")]
-  if (nrow(ctrycdr) > 0) {
-  ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=1)
-  ctrycdrfull%>%group_by(country)%>%summarize(min(year), max(year))
-  } else {
-    #message: country not found, exit function
-  }
-  
-  build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "country",  "year"), all=TRUE)
+  if (IsCountryAndColsAvailable(mycountry, dfcdr)==FALSE) { stop(countrymsg) }
+  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "year", "value")]
+  ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  if (is.data.frame(ctrycdrfull)==FALSE) { stop(datemsg) }
+  ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
   colnames(build3)[colnames(build3)=="value.x"] <-"imr"
   colnames(build3)[colnames(build3)=="value.y"] <-"v"
   
@@ -137,8 +130,8 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
 checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
   #assume data has variables country and year
   #will fill in up to a threshold (default = 1 year) with values from nearest year
-  library(dplyr)
-  datesum<-mydata%>%dplyr::group_by(country)%>%dplyr::summarize(minyear=min(year), maxyear=max(year))
+  datemsg<<-""
+  datesum<-mydata%>%dplyr::group_by(country_code)%>%dplyr::summarize(minyear=min(year), maxyear=max(year))
   if (datesum$minyear > startyr) {
     prediff<-datesum$minyear-startyr
     if (prediff <= threshold) {
@@ -148,8 +141,11 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
         prefill$year<-datesum$minyear-i
         mydata<-rbind(mydata, prefill)
       }
-    }
+    } else {
     # over threshold message
+      datemsg<<- paste0("There is a ", prediff, "-year gap in the demographic data compared to your simulation begin date.  You can increase the threshold parameter to fill in data from the closest year.")
+      return(FALSE)
+    }
   }
   if (datesum$maxyear < endyr) {
     if (datesum$minyear-startyr <= threshold) {
@@ -160,6 +156,10 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
           postfill$year<-datesum$maxyear+i
           mydata<-rbind(mydata, postfill)
         }
+      } else {
+        # over threshold message
+        datemsg<<-paste0("There is a ", postdiff, "-year gap in the demographic data compared to your simulation end date.  You can increase the threshold parameter to fill in data from the closest year.")
+        return(FALSE)
       } 
     }
   }
@@ -174,39 +174,54 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
 #  Called by InitializePopulation.R                                           #
 #_____________________________________________________________________________#
 GetPopAgeDist<-function(path, mycountry, start) {
+  disterr<<-""
   setwd(path)
   flist<-list.files(path)
   qqfile<-flist[grepl("qq_pop_both",flist)==TRUE]
+  if (ValidateFilename(path, qqfile)==FALSE) { stop(mymsg) }
   qqdf<-read.csv(qqfile)
+  if (IsCountryAndColsAvailable(country_code=mycountry,mydf=qqdf)==FALSE) { stop(countrymsg) }
   #record for every 5th year - want the closest to start or before start?
   mround <- function(x,base){ 
     base*round(x/base) 
   }
   popyr<-mround(year(start), 5)
   qqkeep<-qqdf[qqdf$country_code==mycountry & qqdf$year==popyr,]
-  qqkeep$ageband<-ifelse(qqkeep$age_from < 30, paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to), "Age_30")
-  bands<-qqkeep%>%group_by(country_code, ageband)%>%summarize(tot=sum(value),minage=min(age_from)) 
-  totpop<-qqkeep%>%group_by(country_code)%>%summarize(totpop=sum(value))
-  numsall<-merge(x=bands, y=totpop, by="country_code")
-  numsall$fraction<-numsall$tot/numsall$totpop
-  agedist <- numsall[order(numsall$minage),]
-  dist<-agedist$fraction
-  names(dist)<-agedist$ageband
-  return(dist)
+ 
+  if (nrow(qqkeep) > 0) {
+    if (!(DemogNumVarExists("age_from", qqkeep) & DemogNumVarExists("age_to", qqkeep))) { 
+      disterr<<- "Non-numeric data in age band variables"
+      return(FALSE) 
+    }
+    if (!(DemogNumVarExists("age_to", qqkeep))) { return(FALSE) }
+    #check min and max age band - now they all go up to 120 but lets be generous and say 90
+    if (min(qqkeep$age_from > 0 || max(qqkeep$age_to) < 90) == FALSE) {
+      qqkeep$ageband<-ifelse(qqkeep$age_from < 30, paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to), "Age_30")
+      bands<-qqkeep%>%group_by(country_code, ageband)%>%summarize(tot=sum(value),minage=min(age_from)) 
+      totpop<-qqkeep%>%group_by(country_code)%>%summarize(totpop=sum(value))
+      numsall<-merge(x=bands, y=totpop, by="country_code")
+      numsall$fraction<-numsall$tot/numsall$totpop
+      agedist <- numsall[order(numsall$minage),]
+      dist<-agedist$fraction
+      names(dist)<-agedist$ageband
+      return(dist)
+    } else { disterr<<-"Incomplete age bands for this country and year" }
+  } else { disterr<<-"No age distribution input found for this country and year" }
 }
 
 
 #_____________________________________________________________________________#
 # This function returns a dataset with a row for each year of simulation,     #
 # with DosesCampaign, CoverRoutine, and AgeLimCampaign                        # 
-#   NOTE: ASSUMES FILENAMES CONTAIN: "mena-routine" and "mena-routine"        #
-#    NOTE: NOT CURRENTLY LIMITED TO YEARS OF SIM                              #
+#   NOTE: ASSUMES FILENAMES CONTAIN: "mena-routine" and "mena-campaign"       #
+#    NOTE: NOT CURRENTLY LIMITED TO YEARS OF SIM, could use GetVIMCdates?     #
 #     12/6/18 copying destring from taRifx to deal with "<NA>" in vacc files  #
 #_____________________________________________________________________________#
 destring <- function(x,keep="0-9.-") {
   return( as.numeric(gsub(paste("[^",keep,"]+",sep=""),"",x)) )
 }
 GetVaccScenario<-function(mycountry, scenario, directory) {
+  vaccmsg<<-""
   setwd(directory)
   flist<-list.files(directory)
   if (scenario=="routine" | scenario=="both") {
@@ -219,38 +234,55 @@ GetVaccScenario<-function(mycountry, scenario, directory) {
   #   if (scenario=="none") {
   #    filename<-flist[grepl("mena-no-vacc",flist)==TRUE] #empty file, data types do not match others
   #  }
-
-  dfvacc<-read.csv(filename[1], stringsAsFactors = FALSE)
-  ctryvacc<-dfvacc[dfvacc$country_code==mycountry, c("country_code", "country", "year","vaccine", "activity_type", "age_last", "target" , "coverage")]
-  colnames(ctryvacc)[colnames(ctryvacc)=="coverage"] <-"CoverRoutine"
-  colnames(ctryvacc)[colnames(ctryvacc)=="age_last"] <-"AgeLimCampaign"
-  ##target has "<NA>" as character, hosing conversion
-  #target is "<NA>" where activity type = routine...
-  #still getting coercion warning
-  ctryvacc$DosesCampaign<-destring(ctryvacc$target)
-  #ctryvacc$DosesCampaign<-ifelse(ctryvacc$activity_type=="routine", 0, as.numeric(ctryvacc$target))
-  #ctryvacc$DosesCampaign<-ifelse(is.numeric(ctryvacc$target), as.numeric(ctryvacc$target), 0)
-  newdf<-subset(ctryvacc, select=-c(target))
-  #better way to make dataset with same structure if we need it:
-  #if (scenario=="none") {
-   # newdf<-newdf[newf$country_code=="XXX",]
-  #}
+    if (ValidateFilename(directory, filename)==TRUE) { 
+      dfvacc<-read.csv(filename[1], stringsAsFactors = FALSE)
+      if (IsCountryAndColsAvailable(country_code=mycountry,mydf=dfvacc)==FALSE) { stop(countrymsg) }
+      #target and year validated above.  Do we need AgeLimCampaign?
+      if (scenario=="routine" || scenario=="both") {
+          if (!(DemogNumVarExists("coverage", dfvacc))) { 
+            vaccmsg<<-"coverage variable missing from vaccination file"
+            return(FALSE) 
+            }
+      }
+      #if (!(DemogNumVarExists("age_last", dfvacc))) { return(FALSE) }
+      ctryvacc<-dfvacc[dfvacc$country_code==mycountry, c("country_code", "year", "activity_type", "target" , "coverage")]
+      colnames(ctryvacc)[colnames(ctryvacc)=="coverage"] <-"CoverRoutine"
+      ##target has "<NA>" where activity type = routine, hosing conversion
+      #still getting coercion warning
+      #getting this even though not strictly required by routine option
+      ctryvacc$DosesCampaign<-destring(ctryvacc$target)
+      newdf<-subset(ctryvacc, select=-c(target))
+    }
+    #better way to make dataset with same structure if we need it:
+    #if (scenario=="none") {
+    # newdf<-newdf[newf$country_code=="XXX",]
+    #}
 }
 
+#_____________________________________________________________________________#
+# Function GetDiseaseStateDist, called by InitializePopulation.R              #
+# Reads dist_both.csv, which is supplied with scripts; format should not vary #
+#_____________________________________________________________________________#
 GetDiseaseStateDist<-function(directory, region) {
-  setwd(directory)
-  dist<-read.csv("dist_both.csv", stringsAsFactors = TRUE)
-  distcol<-ifelse(region=='hyper', 4, 3)
-  statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
-  return(statefract)
+  dxerr<<-""
+  if (ValidateFilename(directory, "dist_both.csv")==TRUE) {  
+    setwd(directory)
+    dist<-read.csv("dist_both.csv", stringsAsFactors = TRUE)
+    distcol<-ifelse(region=='hyper', 4, 3)
+    statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
+    return(statefract)
+  } else {
+    dxerr<<-"Disease state distribution file not found.  File [dist_both.csv] is packaged with the R scripts and should be in the same directory."
+    return(FALSE)
+  }
 }
 #_____________________________________________________________________________#
 # Functions called by MenA_simple3D                                           #
 # Contents:                                                                   #
-# Get WAIFWmatrix: Read matrix from input data folder, format for use in      #
-#  simulation, using expandWAIFW.  Called by MenA_VaccSims.R, returns matrix  #
-#	expandWaifw : Ucalled by GetWAIFWmatrix: Expand WAIFW matrices              #
-#      to match monthlypopulation length, output is used by MenA_OneSim       #
+# Get WAIFWmatrix: Reads waifw_both.csv, which is supplied with scripts;      # 
+# format should not vary                                                      #
+#	expandWaifw : called by GetWAIFWmatrix: Expand WAIFW matrices              #
+#      to match monthly population length, output is used by MenA_OneSim       #
 #_____________________________________________________________________________#
 expandWaifw<-function(waifw){
   # repeat what was originally columns :
@@ -266,12 +298,17 @@ expandWaifw<-function(waifw){
 }
 
 GetWAIFWmatrix<-function(path, region) {
-  setwd(path)
-  waifwin<-read.csv("WAIFW_both.csv", stringsAsFactors = FALSE)  #vector
-  Rwaifw<-waifwin[waifwin$region==region & waifwin$season=='rainy', 4]
-  Dwaifw<-waifwin[waifwin$region==region & waifwin$season=='dry', 4]
-  wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
-  dimnames(wboth)[[3]]<-c("rainy", "dry")
-  return(wboth)
-  
+  waifwerr<<-""
+  if (ValidateFilename(path, "WAIFW_both.csv")==TRUE) {  
+    setwd(path)
+    waifwin<-read.csv("WAIFW_both.csv", stringsAsFactors = FALSE)  #vector
+    Rwaifw<-waifwin[waifwin$region==region & waifwin$season=='rainy', 4]
+    Dwaifw<-waifwin[waifwin$region==region & waifwin$season=='dry', 4]
+    wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
+    dimnames(wboth)[[3]]<-c("rainy", "dry")
+    return(wboth)
+  } else {
+    waifwerr<<-"WAIFW file not found.  File [WAIFW_both.csv] is packaged with the R scripts and should be in the same directory."
+    return(FALSE)
+  }
 }

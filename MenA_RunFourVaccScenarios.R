@@ -6,9 +6,10 @@
 # PUrpose: Adapted from MenA_VaccSims to run 4 vaccination scenarios at once  #
 #   specify country, start, end, region, and number of simulations to run     #
 #_____________________________________________________________________________#
-# Output:                                                                     #
+# Output: 2 .csv files of subsetted detail(optional, use detail parameter)    #
+#   and summary output, plus two charts (optional, use charts parameter)      #
 #_____________________________________________________________________________#
-# Author: Chris Stewart chris.c.stewart@kp.org 2018                          #
+# Author: Chris Stewart chris.c.stewart@kp.org 2018                           #
 #    adapted from Mike Jackson's SAS version                                  #
 #_____________________________________________________________________________#
 library(lubridate)
@@ -25,12 +26,13 @@ PSA <- FALSE
 
 phi<-0.2
 sd<-46209 #seed for random sto, use same for all scenarios
-nSims<-100
+nSims<-10
 #directory containing inputs from https://montagu.vaccineimpact.org/
 inputdir<-"\\\\HOME/stewcc1/MenAModel/download"
 outputdir<-"\\\\HOME/stewcc1/MenAModel/data"
 #directory containing R scripts
 script.dir <- "\\\\home/stewcc1/MenAModel/R_programming"
+detail<-1
 charts<-TRUE
 ###end parameters to set 
 
@@ -95,7 +97,6 @@ for (x in 1:length(vacc_vector)) {
   #final summarization
   filename = paste0(mycountry, "_", vacc_program, "_", Sys.Date(), ".csv")
   #detail output - for testing
-  detail<-1
   if (detail > 0) {
     tensims<-rbindlist(my_data[1:10])
     tensimsum<-tensims%>%group_by(simulation, IterYear)%>%summarize(sumCases=sum(Cases))
@@ -111,7 +112,7 @@ for (x in 1:length(vacc_vector)) {
 if (charts==TRUE) {
   mygrid<-GridofTenSims(datadir=outputdir, mycountry=mycountry, saveit=TRUE)
   myplot<-PlotAllScenarios(datadir=outputdir, mycountry=mycountry, saveit=TRUE) 
-  print(paste("Charts written to", datadir))
+  print(paste("Charts written to", outputdir))
 }
 print(begin)
 print(Sys.time())

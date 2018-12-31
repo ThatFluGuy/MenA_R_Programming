@@ -70,6 +70,7 @@ PlotAllScenarios<-function(datadir, mycountry, saveit) {
 #grid.arrange(plot4a, plot4b, ncol=1)
 #dev.off()
 PlotTenSims<-function(filename, stitle) {
+  library(ggplot2)
   firstten<-read.csv(filename)
   firstten$factorsim<-as.factor(firstten$simulation)
   firstten<-firstten[, 3:5]

@@ -1,7 +1,7 @@
 #### Program information ######################################################
 # Source file name: MenA_OneSim.R                                             #
 #_____________________________________________________________________________#
-# Input datasets: none                                                        #
+# Input datasets: none.                                                       #
 #_____________________________________________________________________________#
 # Parameters:                                                                 #
 # Start and end dates of simulation - to be specified in calling program      #
@@ -109,7 +109,7 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       #Vaccinate here, monthly
       if (vacc_program!="none") {
         #there are some cases where theres nothing to do in many years
-        if  (program=="campaign") { 
+        if  (vacc_program=="campaign") { 
           if (year(theDate) %in% nodoses==FALSE) {
             pop[,,j] <- vaccinate(popslice=pop[,,j], vlookup=myvacc, type=vacc_program, mydate=theDate)
             #print("vaccinating")
