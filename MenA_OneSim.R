@@ -1,5 +1,8 @@
 #### Program information ######################################################
+# Package: MenA_VaccSims                                                      #
 # Source file name: MenA_OneSim.R                                             #
+# Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
+# Version Date 12/31/2018                                                     #
 #_____________________________________________________________________________#
 # Input datasets: none.                                                       #
 #_____________________________________________________________________________#

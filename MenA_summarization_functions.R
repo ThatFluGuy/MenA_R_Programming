@@ -1,20 +1,18 @@
 #### Program information ######################################################
+# Package: MenA_VaccSims                                                      #
 # Source file name: MenA_summarization_functions.R                            #
-#_____________________________________________________________________________#
-# Input datasets: none                                                        #
+# Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
+# Version Date 12/31/2018                                                     #
 #_____________________________________________________________________________#
 # Functions called by MenA_VaccSim                                            #
 # Contents:                                                                   #
-# getCohortSize: calulate total poplation in each year and year of age        #
-# summarizeOneSim: Collapse results of one simulation into a data frame       #
+# -getCohortSize: calulate total poplation in each year and year of age        #
+# -summarizeOneSim: Collapse results of one simulation into a data frame       #
 #   with Cases, Deaths, Dalys by year and year of age.                        #
-#	SummarizeForOutput : takes a list of products of summarizeOneSim and        #  
+#	-SummarizeForOutput : takes a list of products of summarizeOneSim and        #  
 #   calculates mean over all simulations; writes output file                  #
 #_____________________________________________________________________________#
-#_____________________________________________________________________________#
-# Created as functiosn 3/8/18, by Chris Stewart stewart.c@ghc.org             #
-# Changes:                                                                    #
-#_____________________________________________________________________________#
+
 
 getCohortSize<-function(poparray) {
   #cohort size - sum 2nd dimension except Inc / only need to do once - first simulation

@@ -1,10 +1,14 @@
 
-
 #### Program information ######################################################
 # Source file name: MenA_RunFourVaccScenarios.R                               #
+# Package: MenA_VaccSims                                                      #
+# Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
+# Version Date 12/31/2018                                                     #
 #_____________________________________________________________________________#
 # PUrpose: Adapted from MenA_VaccSims to run 4 vaccination scenarios at once  #
 #   specify country, start, end, region, and number of simulations to run     #
+#   Please start with MenA_VaccSims.R and a small number of simulations       #
+#   when first using this package                                             #  
 #_____________________________________________________________________________#
 # Output: 2 .csv files of subsetted detail(optional, use detail parameter)    #
 #   and summary output, plus two charts (optional, use charts parameter)      #
@@ -18,7 +22,7 @@ library(data.table)
 
 ##parameters to set:
 begin<-Sys.time()
-mycountry <- "ERI"
+mycountry <- "COD"
 start <- as.Date("2001-01-01")
 end <- as.Date("2100-12-31")
 myregion <- "hyper"
@@ -39,7 +43,6 @@ charts<-TRUE
 #script directory contains functions
 setwd(script.dir)
 source("ModelInputUtilities.R")
-source("InitializePopulation.R")
 source("MenA_OneSim.R")
 source("MenA_helper_functions.R")
 source("MenA_summarization_functions.R")

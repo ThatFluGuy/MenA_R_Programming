@@ -1,13 +1,15 @@
 #### Program information ######################################################
 # Source file name: MenA_helper_functions.R                                   #
+# Package: MenA_VaccSims                                                      #
+# Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
+# Version Date 12/13/18                                                       #
 #_____________________________________________________________________________#
-# Input datasets: none                                                        #
 #_____________________________________________________________________________#
 # Functions called by MenA_OneSim and calling scripts                         #
 # Contents:                                                                   #
-# --InitializePopulation: Used by calling scripts before running simulations  #
-# --GetInfectiveRatio: Called by MenA_OneSim in calculating force ofinfection #
-#`--Vaccinate: Called by MenA_OneSim according to which program is specified  #
+# -InitializePopulation: Used by calling scripts before running simulations  #
+# -GetInfectiveRatio: Called by MenA_OneSim in calculating force ofinfection #
+#`-Vaccinate: Called by MenA_OneSim according to which program is specified  #
 #_____________________________________________________________________________#
 
 

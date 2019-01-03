@@ -2,6 +2,10 @@
 
 #### Program information ######################################################
 # Source file name: MenA_VaccSims.R                                           #
+#### Program information ######################################################
+# Package: MenA_VaccSims                                                      #
+# Source file name: MenA_VaccSims.R                                           #
+# Version Date 12/31/2018                                                     #
 #_____________________________________________________________________________#
 # PUrpose: run MenA simulations under different vaccination scenarios         #
 #   specify scenario, country, region, and number of simulations to run       #
@@ -21,17 +25,17 @@ library(data.table) #melt
 
 ##parameters to set:
 begin<-Sys.time()
-mycountry <- "ERI"
+mycountry <- "ETH"
 start <- as.Date("2001-01-01")
 end <- as.Date("2100-12-31")
 myregion <- "hyper"  #"hyper" or "not_hyper"
 PSA <- FALSE
-vacc_program <- "routine" ## "campaign" or "routine" or "both" or "none"
+vacc_program <- "both" ## "campaign" or "routine" or "both" or "none"
 phi<-0.2
 sd<-4567 #seed for random sto, use same for all scenarios
 nSims<-10  #100 takes ~ 3 mon, 1000 takes 45
 #directory containing inputs from https://montagu.vaccineimpact.org/
-inputdir<-"\\\\HOME/stewcc1/MenAModel/download"
+inputdir<-"\\\\HOME/stewcc1/MenAModel/download_hosed"
 outputdir<-"\\\\HOME/stewcc1/MenAModel/data"
 #directory containing R scripts
 script.dir <- "\\\\home/stewcc1/MenAModel/R_programming"
@@ -54,7 +58,6 @@ if (dir.exists(script.dir)) {
 setwd(script.dir)
 source("MenA_paramCheck.R")
 source("ModelInputUtilities.R")
-source("InitializePopulation.R")
 source("MenA_OneSim.R")
 source("MenA_helper_functions.R")
 source("MenA_summarization_functions.R")
@@ -64,16 +67,19 @@ names(setparams)<-c("mycountry", "start", "end", "myregion", "PSA", "vacc_progra
 if (CheckSetParameters(setparams)==FALSE) {
     stop(spmessage)
 } else {
-  if (length(spmessage)>1) {
-    print(spmessage)
-  }
+  if (length(spmessage)>1) { print(spmessage) }
 }
 
 #country-specific parameters
 myparams<-GetDemographicParameters(path=inputdir,  mycountry=mycountry, start=start, end=end)
-
+if (CheckDemogParameters(myparams)==FALSE) {
+  stop(dpmessage)
+} else {
+  if (length(dpmessage)>1) { print(dpmessage) }
+}
 if (vacc_program!="none") {
   myvacc<-GetVaccScenario(mycountry=mycountry, scenario=vacc_program, directory=inputdir)
+  if (is.data.frame(myvacc)==FALSE) { stop(vaccmsg)}  #check for output
   #make as vector of years where nothing happens (empty except for campaign only) for efficiency
   if (vacc_program=="campaign") {
     nodoses<-as.vector(myvacc[is.na(myvacc$DosesCampaign) | myvacc$DosesCampaign==0,"year"])

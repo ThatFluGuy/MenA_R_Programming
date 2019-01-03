@@ -1,7 +1,32 @@
+#### Program information ######################################################
+# Package: MenA_VaccSims                                                      #
+# Source file name: MenA_paramCheck.R                                         #
+# Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
+# Version Date 12/31/2018                                                     #
 #_____________________________________________________________________________#
 # Functions called for validating inputs, called by MenA_VaccSims.R and       #
 # ModelInputUtilities.R                                                       #
+# ALL RETURN TRUE OR (FALSE + MESSAGE) except GetFilename, which returns a    #
+#   filename or (FALSE + MESSAGE)                                             #
+# Contents:                                                                   #
+# -DemogNumVarExists: takes variable name and dataframe, checks to see if     #
+#   variable exists in dataframe and that it is numeric                       #
+# -GetFilename: takes directory path and pattern (part of file name.)         #
+#   Makes sure a file is found and can be read with read.csv                  #
+# -IsCountryAndColAvailable: takes country code and dataframe, makes sure df  #
+#   contains country_code variable and data for requested country is present  #
+#   if forVacc=1 is specified, also checks for target variable, which is not  #
+#   currently numeric in source data                                          #
+# -CheckDemogFileStructure: takes country, dataframe, and description         #
+#   (which file, for error message only.)  Calls IsCountryandColAvailable     # 
+#    makes sure numeric year and value variables are present.                 #
+# -CheckDemogParamaters: input is output of GetDemogParameters (dataframe)    #
+#   makes sure all variables are present and means are non-zero               # 
+# -CheckSetParamaters: input is a list of parameters set by user in calling   #
+#   script. Validates input: some are limited to specific values, others      #
+#   must be numeric, directories must be valid path.                          #
 #_____________________________________________________________________________#
+
 DemogNumVarExists<-function(varname, mydf) {
   colix<-grep(varname, colnames(mydf))
   if (length(colix > 0)) {
@@ -18,52 +43,61 @@ DemogNumVarExists<-function(varname, mydf) {
   return(TRUE)
 }
 
-ValidateFilename<-function(mypath, myfile) {
-  #input dir has already been validated
-  mymsg=""
-  if (grepl(".csv", myfile)==FALSE) {
-    mymsg<<-paste0(myfile, " is not a .csv file")
+IsCountryAndColAvailable<-function(country_code, mydf, forVacc=0) {
+  #make sure requested country is in data, and required columns are present
+  countrymsg<<-""
+  if ("country_code" %in% colnames(mydf)==FALSE) {
+    countrymsg<<-"country_code variable not found in input data:"
     return(FALSE)
   }
-  if (file.exists(paste0(mypath, "/", myfile))==FALSE){
-    mymsg<<-paste0(myfile, " not found in input directory")
+  if (!(country_code %in% levels(mydf$country_code) || country_code %in% as.vector(mydf$country_code))){
+    countrymsg<<-paste0(country_code, " not available in input data:")
     return(FALSE)
+  }
+  if (forVacc==1) { #check target instead (its not numeric so don't use other column validation fxn)
+    if ("target" %in% colnames(mydf)) {
+      return(TRUE)
+    } else {
+      countrymsg<<-"Required column [target] is missing from input data:"
+      return(FALSE)
+    }
   }
   return(TRUE)
 }
 
-#_____________________________________________________________________________#
-# This function checks for the country code in the data, and checks for the   #
-# other reqd variable names (year and value, or year and target if forVacc)   #
-#_____________________________________________________________________________#
-IsCountryAndColsAvailable<-function(country_code, mydf, forVacc=0) {
-  #make sure requested country is in data, and required columns are present
-  countrymsg<<-""
-  if ("country_code" %in% colnames(mydf)==FALSE) {
-    countrymsg<<-"country_code variable not found in input data."
+GetFilename<-function(path, pattern) {
+  mymsg<<-""
+  setwd(path)
+  flist<-list.files(path)
+  myfile<-flist[grepl(pattern,flist)==TRUE]
+  if (length(myfile)==0) { 
+    mymsg<<-paste("No file found for ", pattern)
     return(FALSE)
   }
-  if (country_code %in% levels(mydf$country_code) || country_code %in% as.vector(mydf$country_code)) {
-    return(TRUE)
-  } else {
-    countrymsg<<-paste0(country_code, " not available in input data.")
+  e<-try(read.csv(myfile[1]))
+  if (class(e) == "try-error" || is.na(e)) { 
+    mymsg<<-paste0(myfile[1], " is not a .csv file")
     return(FALSE)
   }
-  if (forVacc==0) {
-    if ("year" %in% colnames(mydf) & "value" %in% colnames(mydf)) {
-      return(TRUE)
-    } else {
-      countrymsg<<-"Required columns [year] and [value] are missing from input data."
-      return(FALSE)
-    }
-  } else { #check target instead (its not numeric so don't use other column validation fxn)
-    if ("year" %in% colnames(mydf) & "target" %in% colnames(mydf)) {
-      return(TRUE)
-    } else {
-      countrymsg<<-"Required columns [year] and [target] are missing from input data."
-      return(FALSE)
-    }
+  return(myfile[1])
+}
+
+CheckDemogFileStructure<-function(mycountry, mydf, dfdesc){
+  filemsg<<-""
+  #just a wrapper/shortcut for 3 function calls
+  if (IsCountryAndColAvailable(mycountry, mydf)==FALSE) {
+    filemsg<<-paste(countrymsg, dfdesc)
+    return(FALSE)
   }
+  if (!(DemogNumVarExists("year", mydf))) { 
+    filemsg<<-paste("Numeric variable [year] does not exist in file: ", dfdesc)
+    return(FALSE)
+  }
+  if (!(DemogNumVarExists("value", mydf))) { 
+    filemsg<<-paste("Numeric variable [value] does not exist in file: ", dfdesc) 
+    return(FALSE)
+  }
+  return(TRUE)
 }
 
 CheckDemogParameters<-function(params) {

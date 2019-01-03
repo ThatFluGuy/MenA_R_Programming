@@ -1,7 +1,9 @@
 
-
 #### Program information ######################################################
+# Package: MenA_VaccSims                                                      #
 # Source file name: MenA_plottingFunctions.R                                  #
+# Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
+# Version Date 12/13/18                                                       #
 #_______________________________________ _____________________________________#
 # Input datasets: specify folder containing downloads from                    #
 #   the output of MenA_VaccSims.R                                             #
@@ -11,16 +13,14 @@
 # 3-letter country code                                                       #       
 #_____________________________________________________________________________#
 # Purpose: Save a graph (various flavors) to the same directory as input data #
-#_____________________________________________________________________________#
-# Created  12/7/18, by Chris Stewart chris.c.stewart@kp.org                   #                                   
+# - PlotAllScenarios: up to four scenarios for a country on the same graph    #
+# - PlotTenSims: plot ten simulations ("detail" output file) on same graph    #
+# - GridOfTenSims: Calls PlotTenSims for up to four scenarios, arranges in    #
+#   grid.                                                                     #
+# - GetMostRecentFile (utility function) returnsthe most recent filename      #
+#   matching a pattern, so all plotting functions will use most recent run    #
 #_____________________________________________________________________________#
 
-#_____________________________________________________________________________#
-# Function: Get the most recent file with name matching a pattern             #
-#_____________________________________________________________________________#
-# Purpose: Given a directory and a pattern, return the name of the most recent# 
-# file.  All plotting functions will use the most recent file                 #
-#_____________________________________________________________________________#
 
 GetMostRecentFile<-function(directory, mypattern) {
     filedf <- file.info(list.files(directory, pattern=mypattern, full.names = T))
@@ -65,10 +65,6 @@ PlotAllScenarios<-function(datadir, mycountry, saveit) {
   return(plot1)
 }
 
-
-#tiff('\\\\home/stewcc1/MH_VDW/ICD10/papers/psychosis/Figures/Figure4ab.tiff', units="in", width=5, height=5, res=300)
-#grid.arrange(plot4a, plot4b, ncol=1)
-#dev.off()
 PlotTenSims<-function(filename, stitle) {
   library(ggplot2)
   firstten<-read.csv(filename)
@@ -79,6 +75,7 @@ PlotTenSims<-function(filename, stitle) {
   tenplot<-ggplot(data=firstten, aes(x=Year, y=sumCases, color=factorsim)) + geom_line() + ggtitle(stitle)
   tenplot
 }
+
 GridofTenSims<-function(datadir, mycountry, saveit) {
   #kind of messy but you can tell if it is working
   library(ggplot2)
