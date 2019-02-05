@@ -26,8 +26,8 @@ library(data.table) #melt
 ##parameters to set:
 begin<-Sys.time()
 mycountry <- "ETH"
-start <- as.Date("2001-01-01")
-end <- as.Date("2100-12-31")
+start <- as.Date("2000-01-01")
+end <- as.Date("2016-01-01")
 myregion <- "hyper"  #"hyper" or "not_hyper"
 PSA <- FALSE
 vacc_program <- "both" ## "campaign" or "routine" or "both" or "none"
