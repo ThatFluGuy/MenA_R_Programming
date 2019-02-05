@@ -26,13 +26,23 @@ getCohortSize<-function(poparray) {
     cohortsample<-cohortlong[month(cohortlong$RealDate)==7 & day(cohortlong$RealDate)>24,]
     coh_under30<-cohortsample[cohortsample$AgeInYears!=30,]
     coh_over30<-cohortsample[cohortsample$AgeInYears==30,]
-    coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=100),rep(coh_over30$value/41, 41))
+    # coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=100),rep(coh_over30$value/41, 41))
+    # Changing number of times ages get repeated according to number of unique years in final data set.
+    coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=length(unique(coh_over30$IterYear))),
+                         rep(coh_over30$value/41, 41))
+    # Same here.
+    # coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=100),rep(coh_over30$value/41, 41))
+    coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, length(unique(coh_over30$IterYear))),
+                         rep(coh_over30$value/41, 41))
     coh_over30expdf<-as.data.frame(coh_over30exp)
     colnames(coh_over30expdf)<-c("IterYear", "AgeInYears", "cohortsize")
     sum_under30<-coh_under30%>%group_by(IterYear, AgeInYears)%>%summarize(cohortsize=sum(value))
     cohortsizes<-rbind(as.data.frame(sum_under30), coh_over30expdf)
     return(cohortsizes)
 }
+
+
+# Chloe 2/5/19: I have not edited the summary function below using similar edits to above.
 
 summarizeOneSim<-function(poparray, n, cfr) {
   #summarize incident cases by year and year of age, calculate deaths and DALYs

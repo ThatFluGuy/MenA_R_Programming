@@ -22,23 +22,26 @@
 library(lubridate)
 library(dplyr)
 library(data.table) #melt
+# Chloe 2/5/19: Added package to use data.table
+library(reshape2)
 
 ##parameters to set:
 begin<-Sys.time()
 mycountry <- "ETH"
-start <- as.Date("2000-01-01")
-end <- as.Date("2016-01-01")
+start <- as.Date("2001-01-01")
+end <- as.Date("2100-01-01")
+## NOTE MANY FUNCTIONS APPEAR TO DEPEND ON THESE BEING FIRST AND LAST DATES: EDIT LATER.
 myregion <- "hyper"  #"hyper" or "not_hyper"
 PSA <- FALSE
-vacc_program <- "both" ## "campaign" or "routine" or "both" or "none"
+vacc_program <- "none" ## "campaign" or "routine" or "both" or "none"
 phi<-0.2
 sd<-4567 #seed for random sto, use same for all scenarios
 nSims<-10  #100 takes ~ 3 mon, 1000 takes 45
 #directory containing inputs from https://montagu.vaccineimpact.org/
-inputdir<-"\\\\HOME/stewcc1/MenAModel/download_hosed"
-outputdir<-"\\\\HOME/stewcc1/MenAModel/data"
+inputdir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/201810synthetic_downloaded_2019"
+outputdir<-"C:/Users/krakcx1/Desktop/Sim_output"
 #directory containing R scripts
-script.dir <- "\\\\home/stewcc1/MenAModel/R_programming"
+script.dir <- "C:/Users/krakcx1/Desktop/Cloned_meningitis_code"
 ###end parameters to set 
 
 #script directory contains functions
@@ -71,6 +74,7 @@ if (CheckSetParameters(setparams)==FALSE) {
 }
 
 #country-specific parameters
+
 myparams<-GetDemographicParameters(path=inputdir,  mycountry=mycountry, start=start, end=end)
 if (CheckDemogParameters(myparams)==FALSE) {
   stop(dpmessage)
@@ -122,6 +126,9 @@ for (n in 1:nSims) {
     #age-specific death rates (for PSA=no, other option not implemented yet)
     cfr <- c(0.106, 0.096, 0.089, 0.086, 0.079, 0.122) #used AFTER simulation macro in SAS
     my_data[[n]] <-summarizeOneSim(finalpop, n, cfr)
+    # Chloe 2/5/19: this function (and getCohortSize) appear to be specifically written
+    # for a certain number of years, i.e. cannot limit to just 15 years needed;
+    # need to limit later.
     if (n==1) {
       cohortSize<-getCohortSize(finalpop)
       totalPop<-cohortSize%>%group_by(IterYear)%>%summarize(tot=sum(cohortsize))
