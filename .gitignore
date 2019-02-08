@@ -1,0 +1,11 @@
+# Files to ignore in git repository
+
+*.png
+*.ppt
+*.pptx
+*.doc
+*.docx
+.Rproj.user/*
+.Rproj.user
+.Rhistory
+.Rdata
