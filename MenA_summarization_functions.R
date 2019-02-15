@@ -30,10 +30,6 @@ getCohortSize<-function(poparray) {
     # Changing number of times ages get repeated according to number of unique years in final data set.
     coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=length(unique(coh_over30$IterYear))),
                          rep(coh_over30$value/41, 41))
-    # Same here.
-    # coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=100),rep(coh_over30$value/41, 41))
-    coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, length(unique(coh_over30$IterYear))),
-                         rep(coh_over30$value/41, 41))
     coh_over30expdf<-as.data.frame(coh_over30exp)
     colnames(coh_over30expdf)<-c("IterYear", "AgeInYears", "cohortsize")
     sum_under30<-coh_under30%>%group_by(IterYear, AgeInYears)%>%summarize(cohortsize=sum(value))
@@ -53,15 +49,20 @@ summarizeOneSim<-function(poparray, n, cfr) {
   inclong$AgeInYears<-floor((inclong[,1]-1)/12)
   res<-inclong%>%filter(IterYear>2000)%>%group_by(IterYear,AgeInYears)%>%summarize(Cases=sum(value))
   #split into under or over 30
+  # Chloe: all individuals over 30 grouped together.
   #over 30 generate a data frame with age 30-70, and cases sumingroup/41, for each yearly row
   over30<-res[res$AgeInYears==30,]
-  over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=100),rep(over30$Cases/41, 41))
+  # Chloe: Edited to work for variable number of years of simulation.
+  # over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=100),rep(over30$Cases/41, 41))
+  over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=nrow(over30)),rep(over30$Cases/41, 41))
   over30df<-as.data.frame(over30expanded)
   colnames(over30df)<-c("IterYear", "AgeInYears", "Cases")
   over30df$cfr<-cfr[6]
   #age-vector for death calc (under 30 only, over 30 is a constant)
   cfrVec<-c(rep(cfr[1],1), rep(cfr[2], 4),rep(cfr[3], 5), rep(cfr[4], 5), rep(cfr[5], 5), rep(cfr[6], 10))
-  under30df<-cbind(as.data.frame(res[res$AgeInYears<30,]), "cfr"=rep(cfrVec, 100))
+  # Chloe: Edited to work for variable number of years of simulation.
+  # under30df<-cbind(as.data.frame(res[res$AgeInYears<30,]), "cfr"=rep(cfrVec, 100))
+  under30df<-cbind(as.data.frame(res[res$AgeInYears<30,]), "cfr"=rep(cfrVec, nrow(over30)))
   results<-rbind(under30df, over30df)
   results$Deaths<-results$Cases*results$cfr
   results$DALYs<-results$Deaths*(70-results$AgeInYears) + (results$Cases-results$Deaths)* (0.26*0.072)*(70-results$AgeInYears)
