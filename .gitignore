@@ -5,6 +5,7 @@
 *.pptx
 *.doc
 *.docx
+*.tmp
 .Rproj.user/*
 .Rproj.user
 .Rhistory
