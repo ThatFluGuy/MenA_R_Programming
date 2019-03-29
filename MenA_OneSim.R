@@ -22,6 +22,14 @@
 #   WAIFW and dxrisk as small 3D matrices                                     #           
 #_____________________________________________________________________________#
 
+# Chloe note 3/29: input to function from sims code (just so I can name variables while working with function below)
+# startdt=start, enddt=end, pop=initpop,
+# fixedparams=paramfixed, countryparams=myparams,
+# WAIFWmx=wboth, dxr=dxrisk, vacc_program=vacc_program
+
+# Chloe, 3/29: the WAIFW matrix does appear to be age specific, so I'll need to expand it to be
+# appropriate for the older age groups.
+
 MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWmx, dxr, vacc_program) {
   #setup before loop
   theDate <- start
@@ -29,6 +37,9 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
   imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
   v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
   deathvec<-c(rep(imr,12), rep(v, 349))
+  # Chloe: this is where new death rates could be included; at the moment,
+  # has a single death rate for infants and a single death rate for everyone through age 30 (and beyond)
+  # Could start by expanding here.
   #waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
   wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA
   waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 230)) #waning from high to low ab scaled to weeks
