@@ -191,7 +191,9 @@ GetPopAgeDist<-function(path, mycountry, start) {
     if (!(DemogNumVarExists("age_to", qqkeep))) { return(FALSE) }
     #check min and max age band - now they all go up to 120 but lets be generous and say 90
     if (min(qqkeep$age_from > 0 || max(qqkeep$age_to) < 90) == FALSE) {
-      qqkeep$ageband<-ifelse(qqkeep$age_from < 30, paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to), "Age_30")
+      # Chloe edit 3/22/19: Removing this line so as to not lump all 30+ groups together and replacing with next one.
+      # qqkeep$ageband<-ifelse(qqkeep$age_from < 30, paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to), "Age_30")
+      qqkeep$ageband<-paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to)
       bands<-qqkeep%>%group_by(country_code, ageband)%>%summarize(tot=sum(value),minage=min(age_from)) 
       totpop<-qqkeep%>%group_by(country_code)%>%summarize(totpop=sum(value))
       if (totpop[,2] > 0) {
@@ -278,15 +280,23 @@ GetDiseaseStateDist<-function(directory, region) {
 #	expandWaifw : called by GetWAIFWmatrix: Expand WAIFW matrices               #
 #      to match monthly population length, output is used by MenA_OneSim      #
 #_____________________________________________________________________________#
+# Chloe edit 3/29: need to expand further to account for higher ages part of sim now.
 expandWaifw<-function(waifw){
   # repeat what was originally columns :
   #b[x,1] 60x; b[x,2] 96x; b[1,3] 84x; b[1,4] 120x
   #needs to go to 361 - add extra line at end for last big bucket
+  # Chloe edit 3/29: see note above.
+  #rbind ( 
+   # matrix(data=waifw[c(1,5,9,13)], nrow=60, ncol=4, byrow=TRUE),
+    #matrix(data=waifw[c(2,6,10,14)], nrow=96, ncol=4, byrow=TRUE),
+    #matrix(data=waifw[c(3,7,11,15)], nrow=84, ncol=4, byrow=TRUE),
+    #matrix(data=waifw[c(4,8,12,16)], nrow=121, ncol=4, byrow=TRUE)
+  #)
   rbind ( 
     matrix(data=waifw[c(1,5,9,13)], nrow=60, ncol=4, byrow=TRUE),
     matrix(data=waifw[c(2,6,10,14)], nrow=96, ncol=4, byrow=TRUE),
     matrix(data=waifw[c(3,7,11,15)], nrow=84, ncol=4, byrow=TRUE),
-    matrix(data=waifw[c(4,8,12,16)], nrow=121, ncol=4, byrow=TRUE)
+    matrix(data=waifw[c(4,8,12,16)], nrow=1201, ncol=4, byrow=TRUE)
   )
   
 }
@@ -301,7 +311,16 @@ GetWAIFWmatrix<-function(path, region) {
   waifwin<-read.csv(waifwfile, stringsAsFactors = FALSE)  #vector
   Rwaifw<-waifwin[waifwin$region==region & waifwin$season=='rainy', 4]
   Dwaifw<-waifwin[waifwin$region==region & waifwin$season=='dry', 4]
-  wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
+  # wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
+  # Chloe edit 3/29: Need to change dims to suit larger matrix.
+  wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(1441,4,2))
   dimnames(wboth)[[3]]<-c("rainy", "dry")
   return(wboth)
 }
+
+
+
+
+
+
+
