@@ -281,22 +281,17 @@ GetDiseaseStateDist<-function(directory, region) {
 #      to match monthly population length, output is used by MenA_OneSim      #
 #_____________________________________________________________________________#
 # Chloe edit 3/29: need to expand further to account for higher ages part of sim now.
+# Chloe edit 5/5: left all these new additions to the GetWAIFmatrix() function below.
 expandWaifw<-function(waifw){
   # repeat what was originally columns :
   #b[x,1] 60x; b[x,2] 96x; b[1,3] 84x; b[1,4] 120x
   #needs to go to 361 - add extra line at end for last big bucket
   # Chloe edit 3/29: see note above.
-  #rbind ( 
-   # matrix(data=waifw[c(1,5,9,13)], nrow=60, ncol=4, byrow=TRUE),
-    #matrix(data=waifw[c(2,6,10,14)], nrow=96, ncol=4, byrow=TRUE),
-    #matrix(data=waifw[c(3,7,11,15)], nrow=84, ncol=4, byrow=TRUE),
-    #matrix(data=waifw[c(4,8,12,16)], nrow=121, ncol=4, byrow=TRUE)
-  #)
   rbind ( 
     matrix(data=waifw[c(1,5,9,13)], nrow=60, ncol=4, byrow=TRUE),
     matrix(data=waifw[c(2,6,10,14)], nrow=96, ncol=4, byrow=TRUE),
     matrix(data=waifw[c(3,7,11,15)], nrow=84, ncol=4, byrow=TRUE),
-    matrix(data=waifw[c(4,8,12,16)], nrow=1201, ncol=4, byrow=TRUE)
+    matrix(data=waifw[c(4,8,12,16)], nrow=121, ncol=4, byrow=TRUE)
   )
   
 }
@@ -311,9 +306,18 @@ GetWAIFWmatrix<-function(path, region) {
   waifwin<-read.csv(waifwfile, stringsAsFactors = FALSE)  #vector
   Rwaifw<-waifwin[waifwin$region==region & waifwin$season=='rainy', 4]
   Dwaifw<-waifwin[waifwin$region==region & waifwin$season=='dry', 4]
-  # wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
+  wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
   # Chloe edit 3/29: Need to change dims to suit larger matrix.
-  wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(1441,4,2))
+  # Used to have one row per month up until age 30, then the same
+  # value for ages 30 through 100; now need separate row for each month of age from 30 to the end.
+  # i.e. repeating final row values.
+  add.rainy <- array(rep(wboth[361,,1],each=(1441-361)),dim=c(1441-361,4,1))
+  add.dry <- array(rep(wboth[361,,2],each=(1441-361)),dim=c(1441-361,4,1))
+  rainy.new <- rbind(wboth[,,1],add.rainy[,,1])
+  dry.new <- rbind(wboth[,,2],add.dry[,,1])
+  wboth <- array(NA,dim=c(1441,4,2))
+  wboth[,,1] <- rainy.new
+  wboth[,,2] <- dry.new
   dimnames(wboth)[[3]]<-c("rainy", "dry")
   return(wboth)
 }
