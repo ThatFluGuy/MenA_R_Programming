@@ -36,14 +36,21 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
   births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
   imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
   v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
-  deathvec<-c(rep(imr,12), rep(v, 349))
+  # deathvec<-c(rep(imr,12), rep(v, 349))
+  deathvec<-c(rep(imr,12), rep(v, 1429))
   # Chloe: this is where new death rates could be included; at the moment,
   # has a single death rate for infants and a single death rate for everyone through age 30 (and beyond)
   # Could start by expanding here.
+  # For now, I'll need to change how often the final value is repeated.
   #waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
-  wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA
-  waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 230)) #waning from high to low ab scaled to weeks
-  wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 230)) #waning from low 
+  # Chloe 5/15: age-dependent rates of waning between stages of immunity;
+  # expanding the final group to all individuals up to age 120.
+  # wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA
+  wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 1310))
+  # waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 230)) #waning from high to low ab scaled to weeks
+  waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 1310))
+  # wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 230)) #waning from low 
+  wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 1310))
   j <- 2 #initialize time interval counter - the first position is filled with starting pop
   iterDate<-start-7 #this will make aging happen the first iteration, like SAS - also supply date for initial pop
   LastMonth <- month(iterDate)
@@ -70,7 +77,11 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
       v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
       #new imr, need to update wanev and death
-      wanev <- c(rep(1-imr, 7), wanev[8:361]) 
+      # wanev <- c(rep(1-imr, 7), wanev[8:361]) 
+      # Chloe 5/15: Update to imr changes wanev first few items, rest stays the same.
+      wanev <- c(rep(1-imr, 7), wanev[8:1441]) 
+      ## PAUSED HERE: IN ORDER TO EDIT THIS, NEED TO FIGURE OUT WHAT FORMAT
+      ## THE NEW DEATH RATES WILL TAKE.
       deathvec<-c(rep(imr,12), rep(v, 349))
     }
     
