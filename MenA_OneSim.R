@@ -42,7 +42,7 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
   # has a single death rate for infants and a single death rate for everyone through age 30 (and beyond)
   # Could start by expanding here.
   # For now, I'll need to change how often the final value is repeated.
-  #waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
+  # waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
   # Chloe 5/15: age-dependent rates of waning between stages of immunity;
   # expanding the final group to all individuals up to age 120.
   # wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA

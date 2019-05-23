@@ -96,7 +96,8 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   colnames(build1)[colnames(build1)=="value.y"] <- "birthrate"
   build1$births<-build1$totalpop*build1$birthrate
   
-  #keep empty age_from and age_to from imr file to preserve format
+  # keep empty age_from and age_to from imr file to preserve format
+  # currently infant mortality rates only here.
   imr<-GetFilename(path, "imr_both")
   if (is.character(imr)==FALSE) { stop(mymsg) }
   dfim<-read.csv(imr)
@@ -106,18 +107,61 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   if (is.data.frame(ctryimrfull)==FALSE) { stop(paste(datemsg, " imr_both")) }
   ctryimrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
 
-  build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "year"), all=TRUE)
-  cdr<-GetFilename(path, "cdr_both")
-  if (is.character(cdr)==FALSE) { stop(mymsg) }
-  dfcdr<-read.csv(cdr)
-  if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="cdr_both")==FALSE) { stop (filemsg)}
-  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "year", "value")]
-  ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
-  if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " cdr_both")) }
+  # build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "year"), all=TRUE)
+  
+  # currently other death rate here.
+  # cdr<-GetFilename(path, "cdr_both")
+  # if (is.character(cdr)==FALSE) { stop(mymsg) }
+  # dfcdr<-read.csv(cdr)
+  # if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="cdr_both")==FALSE) { stop (filemsg)}
+  # ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "year", "value")]
+  # ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  # if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " cdr_both")) }
+  # ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  
+  # build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
+  # colnames(build3)[colnames(build3)=="value.x"] <-"imr"
+  # colnames(build3)[colnames(build3)=="value.y"] <-"v"
+  
+  # Chloe 5/22: now, getting all death rates across multiple age groups from single source.
+  dr <- GetFilename(path, "p_dying_both")
+  if (is.character(dr)==FALSE) { stop(mymsg) }
+  dfcdr<-read.csv(dr)
+  if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="p_dying_both")==FALSE) { stop (filemsg)}
+  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "age_to","year","value")]
+  
+  # Chloe 5/22: now, need to switch this to wide format for each year.
+  ctrycdr.wide <- dcast(ctrycdr,country_code+year~age_to,value.var="value")
+  curr.names <- as.numeric(colnames(ctrycdr.wide)[3:ncol(ctrycdr.wide)])
+  for (i in 4:ncol(ctrycdr.wide)){
+    colnames(ctrycdr.wide)[i] <- paste0("dr",curr.names[i-3]+1,curr.names[i-2])
+  }
+  colnames(ctrycdr.wide)[3] <- "dr00"
+  
+  # Chloe 5/22: Since these death rates are only available every 5 years, I am assuming they are consistent across each 5-year span.
+  # However, there is more detailed IMR data available: will retrieve and add later.
+  ctrycdr.new <- ctrycdr.wide %>% slice(rep(1:n(), each = 5))
+  for (i in 1:nrow(ctrycdr.wide)){
+    new.years <- c(ctrycdr.wide$year[i]:(ctrycdr.wide$year[i]+4))
+    first <- which(colnames(ctrycdr.new)=="year")
+    ind1 <- ((i-1)*5)+1
+    ind2 <- (((i-1)*5)+5)
+    ctrycdr.new[ind1:ind2,first] <- new.years
+  }
+  # Replacing infant morality rates from more general file with ones from more-detailed file.
+  # Applicable for the first year of age.
+  # Note the final column only goes through age 84, so I'll assume the same death rate >84 yrs for now.
+  ctryimrfull.part <- ctryimrfull[,-which(colnames(ctryimrfull)=="country_code")]
+  ctrycdr.det <- merge(ctrycdr.new,ctryimrfull.part,by.x="year")
+  ctrycdr.det$dr00 <- ctrycdr.det$value
+  ctrycdr.det <- ctrycdr.det[,-which(colnames(ctrycdr.det)=="value")]
+  
+  ctrycdrfull<-checkVIMCdates(mydata=ctrycdr.det, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " p_dying_both")) }
   ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
-  build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
-  colnames(build3)[colnames(build3)=="value.x"] <-"imr"
-  colnames(build3)[colnames(build3)=="value.y"] <-"v"
+  
+  # Chloe 5/22: Making final data frame.
+  build3<-merge(x=build1, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
   
   return(build3)
   
