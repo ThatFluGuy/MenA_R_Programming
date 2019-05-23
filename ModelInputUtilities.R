@@ -136,7 +136,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   for (i in 4:ncol(ctrycdr.wide)){
     colnames(ctrycdr.wide)[i] <- paste0("dr",curr.names[i-3]+1,curr.names[i-2])
   }
-  colnames(ctrycdr.wide)[3] <- "dr00"
+  colnames(ctrycdr.wide)[3] <- "imr"
   
   # Chloe 5/22: Since these death rates are only available every 5 years, I am assuming they are consistent across each 5-year span.
   # However, there is more detailed IMR data available: will retrieve and add later.
@@ -153,7 +153,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   # Note the final column only goes through age 84, so I'll assume the same death rate >84 yrs for now.
   ctryimrfull.part <- ctryimrfull[,-which(colnames(ctryimrfull)=="country_code")]
   ctrycdr.det <- merge(ctrycdr.new,ctryimrfull.part,by.x="year")
-  ctrycdr.det$dr00 <- ctrycdr.det$value
+  ctrycdr.det$imr <- ctrycdr.det$value
   ctrycdr.det <- ctrycdr.det[,-which(colnames(ctrycdr.det)=="value")]
   
   ctrycdrfull<-checkVIMCdates(mydata=ctrycdr.det, startyr=year(start), endyr=year(end), threshold=fillThreshold)
