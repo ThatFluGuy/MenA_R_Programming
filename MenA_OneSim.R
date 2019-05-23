@@ -35,9 +35,15 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
   theDate <- start
   births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
   imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
-  v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
+  ind1 <- which(colnames(countryparams)=="dr59")
+  ind2 <- which(colnames(countryparams)=="dr7579")
+  ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(1000*52.1775)
+  ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(1000*52.1775)
+  over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(1000*52.1775)
+  deathvec <- c(rep(imr,12),rep(ages1through4,(12*4)),unlist(rep(ages5through79,each=(12*5))),rep(over80,(40*12)+1))
+  # v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
   # deathvec<-c(rep(imr,12), rep(v, 349))
-  deathvec<-c(rep(imr,12), rep(v, 1429))
+  # deathvec<-c(rep(imr,12), rep(v, 1429))
   # Chloe: this is where new death rates could be included; at the moment,
   # has a single death rate for infants and a single death rate for everyone through age 30 (and beyond)
   # Could start by expanding here.
@@ -74,15 +80,21 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
     if (month(theDate)== 1 & LastMonth==12)
     {
       births <-countryparams[countryparams$year==year(theDate), "births"]/52.1775
-      imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
-      v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
+      # imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+      # v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
       #new imr, need to update wanev and death
       # wanev <- c(rep(1-imr, 7), wanev[8:361]) 
       # Chloe 5/15: Update to imr changes wanev first few items, rest stays the same.
       wanev <- c(rep(1-imr, 7), wanev[8:1441]) 
-      ## PAUSED HERE: IN ORDER TO EDIT THIS, NEED TO FIGURE OUT WHAT FORMAT
-      ## THE NEW DEATH RATES WILL TAKE.
-      deathvec<-c(rep(imr,12), rep(v, 349))
+      # deathvec<-c(rep(imr,12), rep(v, 349))
+      # Chloe 5/22: same as above for each year of sim.
+      imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+      ind1 <- which(colnames(countryparams)=="dr59")
+      ind2 <- which(colnames(countryparams)=="dr7579")
+      ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(1000*52.1775)
+      ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(1000*52.1775)
+      over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(1000*52.1775)
+      deathvec <- c(rep(imr,12),rep(ages1through4,(12*4)),unlist(rep(ages5through79,each=(12*5))),rep(over80,(40*12)+1))
     }
     
     #  waifw matrix depends on rainy (Mar-Aug) or dry (Sep-Feb) season

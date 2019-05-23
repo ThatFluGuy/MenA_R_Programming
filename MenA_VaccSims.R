@@ -81,6 +81,8 @@ if (CheckDemogParameters(myparams)==FALSE) {
 } else {
   if (length(dpmessage)>1) { print(dpmessage) }
 }
+# Chloe 5/22: I am not bothering with editing the error message at this point ("Error: v variable missing from demographic parameters."),
+# since I'm not sure if the use of variable death rates by age above imr is going to be standard.
 if (vacc_program!="none") {
   myvacc<-GetVaccScenario(mycountry=mycountry, scenario=vacc_program, directory=inputdir)
   if (is.data.frame(myvacc)==FALSE) { stop(vaccmsg)}  #check for output
