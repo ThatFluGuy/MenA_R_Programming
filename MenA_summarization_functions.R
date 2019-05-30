@@ -17,6 +17,7 @@
 getCohortSize<-function(poparray) {
   #cohort size - sum 2nd dimension except Inc / only need to do once - first simulation
   #modify 3/14/18 - need to split 30+ pot into ages 30-70
+  # Chloe 5/30: no need to split 30+ pot since it's now split.
     cohort<-apply(poparray[,1:8,], c(1,3), sum) # only a little slow
     cohortlong<-melt(cohort)
     cohortlong$RealDate<-as.Date(cohortlong[,2], origin="1970-01-01")
@@ -24,21 +25,23 @@ getCohortSize<-function(poparray) {
     cohortlong$AgeInYears<-floor((cohortlong[,1]-1)/12)
     #pick last day of july per year for calculating cohort size  #WHERE MONTH(date) = 7 AND DAY(date) >= 25;
     cohortsample<-cohortlong[month(cohortlong$RealDate)==7 & day(cohortlong$RealDate)>24,]
-    coh_under30<-cohortsample[cohortsample$AgeInYears!=30,]
-    coh_over30<-cohortsample[cohortsample$AgeInYears==30,]
+    # coh_under30<-cohortsample[cohortsample$AgeInYears!=30,]
+    # Chloe 5/30: just replacing this object to make things simpler.
+    coh_under30<-cohortsample
+    # coh_over30<-cohortsample[cohortsample$AgeInYears==30,]
     # coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=100),rep(coh_over30$value/41, 41))
     # Changing number of times ages get repeated according to number of unique years in final data set.
-    coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=length(unique(coh_over30$IterYear))),
-                         rep(coh_over30$value/41, 41))
-    coh_over30expdf<-as.data.frame(coh_over30exp)
-    colnames(coh_over30expdf)<-c("IterYear", "AgeInYears", "cohortsize")
+    # coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=length(unique(coh_over30$IterYear))),
+      #                   rep(coh_over30$value/41, 41))
+    # coh_over30expdf<-as.data.frame(coh_over30exp)
+    # colnames(coh_over30expdf)<-c("IterYear", "AgeInYears", "cohortsize")
     sum_under30<-coh_under30%>%group_by(IterYear, AgeInYears)%>%summarize(cohortsize=sum(value))
-    cohortsizes<-rbind(as.data.frame(sum_under30), coh_over30expdf)
+    # cohortsizes<-rbind(as.data.frame(sum_under30), coh_over30expdf)
+    # Chloe 5/30: using same renaming trick here.
+    cohortsizes<- as.data.frame(sum_under30)
     return(cohortsizes)
 }
 
-
-# Chloe 2/5/19: I have not edited the summary function below using similar edits to above.
 
 summarizeOneSim<-function(poparray, n, cfr) {
   #summarize incident cases by year and year of age, calculate deaths and DALYs
