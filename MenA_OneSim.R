@@ -105,7 +105,10 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       else { wmx <- WAIFWmx[,,"dry"]}
       # Determine age-specific per-carrier risk of invasive disease;
       #like infection, this is also seasonal but peaks later, hence different months (rainy here = 6-10 June-Oct)
-      iagevec<-seq(0, 360)
+      # Chloe 5/30: don't follow how this works for now, but replacing with values similar to original for now;
+      # assuming the age-specific per-carrier risk of invasive disease is the same for anyone over 30.
+      # iagevec<-seq(0, 360)
+      iagevec<-c(seq(0, 360),rep(360,1441-361))
       if (month(theDate) %in% c(1,2,3,4,5,11,12)) {
         sigma = sigmavec<-dxr["dry",1] + dxr["dry",2] *iagevec
       } else {sigmavec<-dxr["rainy",1] + dxr["rainy",2] *iagevec }
@@ -137,11 +140,14 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       for (x in 1:9) {
         #if (x==1) { beforeaging<-pop[,x,j]}
         #save old 361 spot to add to last pot later
-        save361<-pop[[361,x,j]]
+        # Chloe 5/30: now, in over 120 pot.
+        # save361<-pop[[361,x,j]]
+        save1441<-pop[[1441,x,j]]
         #vector to shift: pop[m,x,j]
         pop[,x,j]<-(c(0,  pop[,x,j])[1 : length(pop[,x,j])])
         #move last monthly group into 30+ pot
-        pop[[361,x,j]]<-pop[[361,x,j]] + save361
+        # pop[[361,x,j]]<-pop[[361,x,j]] + save361
+        pop[[1441,x,j]]<-pop[[1441,x,j]] + save1441
       } #end of x loop
       #Vaccinate here, monthly
       if (vacc_program!="none") {
