@@ -34,6 +34,10 @@
 # drat:::add("vimc")                                                          #
 # install.packages("montagu")                                                 #
 #_____________________________________________________________________________#
+
+# Chloe 7/12: note that death rates by age (TDB) and numbers of births will need to be added to this function (or something like it) to be used
+# in the future; existence of that data in input folder currently assumed in functions below.
+
 GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710gavi-5", destpath=NULL) {
   #GET DATA FROM APIdoes not work from KPWA network but tested from my laptop
   #destpath is where you want to put the data - should be same as path in GetDemographicParameters()
@@ -69,7 +73,11 @@ GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710g
 # This function returns a dataset with a row for each year of simulation,     #
 # with total pop, death rate, birth rate, and infant mortality rate           # 
 # ASSUMES FILENAMES CONTAIN: "tot_pop_both", "cdr_both", "cbr_both","imr_both"#
+# Chloe 7/12/19: now assume death rates and numbers of deaths from files
+# called "p_dying_both" and "births" respectively.
 #_____________________________________________________________________________#
+
+# Chloe 7/12/19: kept crude birth rate data in here, but did use another file with number of births calculated.
 
 GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1) {
   setwd(path)
@@ -83,18 +91,30 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   ctrypopfull%>%group_by(country_code)%>%summarize(min(year), max(year))
   
   cbr<-GetFilename(path, "cbr_both")
+  births <- GetFilename(path, "births")
   if (is.character(cbr)==FALSE) { stop(mymsg) }
+  if (is.character(births)==FALSE) { stop(mymsg) }
   dfbirth<-read.csv(cbr)
+  numbirth<-read.csv(births)
   if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfbirth, dfdesc="cbr_both")==FALSE) { stop (filemsg)}
+  if (CheckDemogFileStructure(mycountry=mycountry, mydf=numbirth, dfdesc="births")==FALSE) { stop (filemsg)}
   ctrybirth<-dfbirth[dfbirth$country_code==mycountry, c("country_code", "year", "value")]
+  numbirth_ctry<-numbirth[numbirth$country_code==mycountry, c("country_code", "year", "value")]
   ctrybirthfull<-checkVIMCdates(mydata=ctrybirth, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  numbirthfull<-checkVIMCdates(mydata=numbirth_ctry, startyr=year(start), endyr=year(end), threshold=fillThreshold)
   if (is.data.frame(ctrybirthfull)==FALSE) { stop(paste(datemsg, " cbr_both")) }
+  if (is.data.frame(numbirthfull)==FALSE) { stop(paste(datemsg, " births")) }
   ctrybirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  numbirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
  
-  build1<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
-  colnames(build1)[colnames(build1)=="value.x"] <- "totalpop"
-  colnames(build1)[colnames(build1)=="value.y"] <- "birthrate"
-  build1$births<-build1$totalpop*build1$birthrate
+  build0<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
+  colnames(build0)[colnames(build1)=="value.x"] <- "totalpop"
+  colnames(build0)[colnames(build1)=="value.y"] <- "birthrate"
+  build1 <- merge(x=build0, y=numbirthfull, by=c("country_code", "year"), all=TRUE)
+  colnames(build1)[colnames(build1)=="value"] <- "births"
+  
+  # build1$births<-build1$totalpop*build1$birthrate
+  # Chloe 7/12: replaced this crude calculation with WPP estimates, since they use more precise birth rates and further smoothing.
   
   # keep empty age_from and age_to from imr file to preserve format
   # currently infant mortality rates only here.
