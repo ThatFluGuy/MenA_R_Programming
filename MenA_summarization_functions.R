@@ -54,16 +54,22 @@ summarizeOneSim<-function(poparray, n, cfr) {
   #split into under or over 30
   # Chloe: all individuals over 30 grouped together.
   #over 30 generate a data frame with age 30-70, and cases sumingroup/41, for each yearly row
-  over30<-res[res$AgeInYears==30,]
+  # Chloe 6/10: now that all individuals over 30 generated separately, no need to 
+  # split over 30 group.
+  # over30<-res[res$AgeInYears==30,]
+  over30<-res[res$AgeInYears>=30,]
   # Chloe: Edited to work for variable number of years of simulation.
   # over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=100),rep(over30$Cases/41, 41))
-  over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=nrow(over30)),rep(over30$Cases/41, 41))
+  # over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=nrow(over30)),rep(over30$Cases/41, 41))
+  over30expanded <- over30
   over30df<-as.data.frame(over30expanded)
   colnames(over30df)<-c("IterYear", "AgeInYears", "Cases")
   over30df$cfr<-cfr[6]
   #age-vector for death calc (under 30 only, over 30 is a constant)
   cfrVec<-c(rep(cfr[1],1), rep(cfr[2], 4),rep(cfr[3], 5), rep(cfr[4], 5), rep(cfr[5], 5), rep(cfr[6], 10))
   # Chloe: Edited to work for variable number of years of simulation.
+  # Chloe 6/10: I believe this used to calculate the number of incident cases that died;
+  # keeping the same death rates for now.
   # under30df<-cbind(as.data.frame(res[res$AgeInYears<30,]), "cfr"=rep(cfrVec, 100))
   under30df<-cbind(as.data.frame(res[res$AgeInYears<30,]), "cfr"=rep(cfrVec, nrow(over30)))
   results<-rbind(under30df, over30df)
