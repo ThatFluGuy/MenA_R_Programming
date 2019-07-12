@@ -108,8 +108,8 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   numbirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
  
   build0<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
-  colnames(build0)[colnames(build1)=="value.x"] <- "totalpop"
-  colnames(build0)[colnames(build1)=="value.y"] <- "birthrate"
+  colnames(build0)[colnames(build0)=="value.x"] <- "totalpop"
+  colnames(build0)[colnames(build0)=="value.y"] <- "birthrate"
   build1 <- merge(x=build0, y=numbirthfull, by=c("country_code", "year"), all=TRUE)
   colnames(build1)[colnames(build1)=="value"] <- "births"
   
