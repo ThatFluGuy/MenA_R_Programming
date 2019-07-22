@@ -85,10 +85,10 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       #new imr, need to update wanev and death
       # wanev <- c(rep(1-imr, 7), wanev[8:361]) 
       # Chloe 5/15: Update to imr changes wanev first few items, rest stays the same.
-      wanev <- c(rep(1-imr, 7), wanev[8:1441]) 
+      imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+       wanev <- c(rep(1-imr, 7), wanev[8:1441]) 
       # deathvec<-c(rep(imr,12), rep(v, 349))
       # Chloe 5/22: same as above for each year of sim.
-      imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
       ind1 <- which(colnames(countryparams)=="dr59")
       ind2 <- which(colnames(countryparams)=="dr7579")
       ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(1000*52.1775)
@@ -106,6 +106,7 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       # Determine age-specific per-carrier risk of invasive disease;
       #like infection, this is also seasonal but peaks later, hence different months (rainy here = 6-10 June-Oct)
       # Chloe 5/30: don't follow how this works for now, but replacing with values similar to original for now;
+      # 6/10: confirmed with Mike this should hold.
       # assuming the age-specific per-carrier risk of invasive disease is the same for anyone over 30.
       # iagevec<-seq(0, 360)
       iagevec<-c(seq(0, 360),rep(360,1441-361))
@@ -124,12 +125,18 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
     pop[,"Ns",j] <- wanel*pop[,"Ls",j-1] - (deathvec+forcevec)*pop[,"Ns",j-1] + pop[,"Ns",j-1]
     #births - this order is the same as sas (could just add births to line above)
     pop[1,"Ns",j] <- pop[1,"Ns",j] + births
-    pop[,"Nc",j] <- forcevec*pop[,"Ns",j-1] - (deathvec+pf["rc"]+sigmavec) * pop[,"Nc",j-1] + pop[,"Nc",j-1]
-    pop[,"Ls",j] <- waneh*pop[,"Hs",j-1] + pf["rc"]*pop[,"Nc",j-1] - (deathvec+wanel+(1-pf["lc"])*forcevec) * pop[,"Ls",j-1] + pop[,"Ls",j-1]
-    pop[,"Lc",j] <- (1-pf["lc"])*forcevec*pop[,"Ls",j-1] - (deathvec+pf["rc"]+(1-pf["ld"])*sigmavec) * pop[,"Lc",j-1]  + pop[,"Lc",j-1]
-    pop[,"Hs",j] <- pf["rc"]*(pop[,"Lc",j-1] + pop[,"Hc",j-1]) + pf["rd"]*pop[,"Di",j-1]  + wanev*pop[,"Va",j-1] - (deathvec+waneh+(1-pf["hc"])*forcevec) * pop[,"Hs",j-1] + pop[,"Hs",j-1]
-    pop[,"Hc",j] <- (1-pf["hc"])*forcevec*pop[,"Hs",j-1] - (deathvec+pf["rc"]-(1-pf["hd"])*sigmavec)*pop[,"Hc",j-1] + pop[,"Hc",j-1]
-    pop[,"Di",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + (1-pf["hd"])*pop[,"Hc",j-1]) - (deathvec+pf["rd"])*pop[,"Di",j-1] + pop[,"Di",j-1]
+    pop[,"Nc",j] <- forcevec*pop[,"Ns",j-1] - (deathvec+pf["rc"]+sigmavec) * pop[,"Nc",j-1] + 
+      pop[,"Nc",j-1]
+    pop[,"Ls",j] <- waneh*pop[,"Hs",j-1] + pf["rc"]*pop[,"Nc",j-1] - 
+      (deathvec+wanel+(1-pf["lc"])*forcevec) * pop[,"Ls",j-1] + pop[,"Ls",j-1]
+    pop[,"Lc",j] <- (1-pf["lc"])*forcevec*pop[,"Ls",j-1] - 
+      (deathvec+pf["rc"]+(1-pf["ld"])*sigmavec) * pop[,"Lc",j-1]  + pop[,"Lc",j-1]
+    pop[,"Hs",j] <- pf["rc"]*(pop[,"Lc",j-1] + pop[,"Hc",j-1]) + 
+      pf["rd"]*pop[,"Di",j-1]  + wanev*pop[,"Va",j-1] - (deathvec+waneh+(1-pf["hc"])*forcevec) * pop[,"Hs",j-1] + pop[,"Hs",j-1]
+    pop[,"Hc",j] <- (1-pf["hc"])*forcevec*pop[,"Hs",j-1] - 
+      (deathvec+pf["rc"]-(1-pf["hd"])*sigmavec)*pop[,"Hc",j-1] + pop[,"Hc",j-1]
+    pop[,"Di",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + 
+                                (1-pf["hd"])*pop[,"Hc",j-1]) - (deathvec+pf["rd"])*pop[,"Di",j-1] + pop[,"Di",j-1]
     pop[,"Va",j] <- -(deathvec+wanev)* pop[,"Va",j-1] + pop[,"Va",j-1]
     # Count incident cases of invasive disease NOTE THESE ARE before incrementing = use old pop
     pop[,"Inc",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + (1-pf["hd"])*pop[,"Hc",j-1])
