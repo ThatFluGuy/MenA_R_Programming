@@ -27,7 +27,7 @@ library(reshape2)
 
 ##parameters to set:
 begin<-Sys.time()
-mycountry <- "ETH"
+mycountry <- "NGA"
 start <- as.Date("2000-01-01")
 end <- as.Date("2100-12-31")
 ## NOTE MANY FUNCTIONS APPEAR TO DEPEND ON THESE BEING FIRST AND LAST DATES: EDIT LATER.
