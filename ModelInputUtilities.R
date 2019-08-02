@@ -267,6 +267,13 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   }
   # For early years, I think you get the same death rates using old and new method!
   
+  # CAK 080219: because of the way the ages vs. birth cohorts work, missing a row for
+  # the first year of the simulation; need to create a row for this year.
+  old.current.year.dr <- current.year.dr
+  add <- current.year.dr[1,]
+  add$year <- 1950
+  current.year.dr <- rbind(add,old.current.year.dr)
+  
   # Merging death rates (IMR and from probs of death) with other parameters.
   build2 <- merge(x=build1,y=ctryimrfull,by=c("country_code","year"),all=TRUE)
   colnames(build2)[6] <- "imr"
