@@ -111,9 +111,30 @@ CheckDemogParameters<-function(params) {
     if (!(DemogNumVarExists("year", params))) { return(FALSE) }
     if (!(DemogNumVarExists("births", params))) { return(FALSE) }
     if (!(DemogNumVarExists("imr", params))) { return(FALSE) }
-    if (!(DemogNumVarExists("v", params))) { return(FALSE) }
+    # if (!(DemogNumVarExists("v", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr14", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr59", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr1014", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr1519", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr2024", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr2529", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr3034", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr3539", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr4044", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr4549", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr5054", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr5559", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr6064", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr6569", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr7074", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr7579", params))) { return(FALSE) }
+    if (!(DemogNumVarExists("dr8084", params))) { return(FALSE) }
+                          
     
-    mns<-colMeans(params[, c("totalpop", "year","births", "imr", "v" )])
+    # mns<-colMeans(params[, c("totalpop", "year","births", "imr", "v" )])
+    mns<-colMeans(params[, c("totalpop", "year","births", "imr",  "dr14", "dr59", "dr1014","dr1519",
+                             "dr2024" ,"dr2529" ,"dr3034" , "dr3539","dr4044", "dr4549","dr5054" ,
+                             "dr5559" ,"dr6064" ,"dr6569" , "dr7074","dr7579","dr8084")])
     if (is.na(mns[1]) || mns[1]==0) {
       dpmessage<<-"Values for totalpop are missing or zero."
       return(FALSE)
@@ -131,9 +152,73 @@ CheckDemogParameters<-function(params) {
       return(FALSE)
     }
     if (is.na(mns[5]) || mns[5]==0) {
-      dpmessage<<-"Values for death rate (v) are missing or zero."
+      dpmessage<<-"Death rate for ages 1-4 are missing or zero."
       return(FALSE)
     }
+    if (is.na(mns[6]) || mns[6]==0) {
+      dpmessage<<-"Death rate for ages 5-9 are missing or zero."
+      return(FALSE)
+    }
+    if (is.na(mns[7]) || mns[7]==0) {
+      dpmessage<<-"Death rate for ages 10-14 are missing or zero."
+      return(FALSE)
+    }
+    if (is.na(mns[8]) || mns[8]==0) {
+      dpmessage<<-"Death rate for ages 15-19 are missing or zero."
+      return(FALSE)
+    }
+    if (is.na(mns[9]) || mns[9]==0) {
+      dpmessage<<-"Death rate for ages 20-24 are missing or zero."
+      return(FALSE)
+    }
+  }
+  if (is.na(mns[10]) || mns[10]==0) {
+    dpmessage<<-"Death rate for ages 25-30 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[11]) || mns[11]==0) {
+    dpmessage<<-"Death rate for ages 31-34 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[12]) || mns[12]==0) {
+    dpmessage<<-"Death rate for ages 35-39 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[13]) || mns[13]==0) {
+    dpmessage<<-"Death rate for ages 40-44 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[14]) || mns[14]==0) {
+    dpmessage<<-"Death rate for ages 45-49 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[15]) || mns[15]==0) {
+    dpmessage<<-"Death rate for ages 50-54 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[16]) || mns[16]==0) {
+    dpmessage<<-"Death rate for ages 55-59 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[17]) || mns[17]==0) {
+    dpmessage<<-"Death rate for ages 60-64 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[18]) || mns[18]==0) {
+    dpmessage<<-"Death rate for ages 65-69 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[19]) || mns[19]==0) {
+    dpmessage<<-"Death rate for ages 70-74 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[20]) || mns[20]==0) {
+    dpmessage<<-"Death rate for ages 75-79 are missing or zero."
+    return(FALSE)
+  }
+  if (is.na(mns[21]) || mns[21]==0) {
+    dpmessage<<-"Death rate for ages 80-120 are missing or zero."
+    return(FALSE)
   }
   return(TRUE)
 }
