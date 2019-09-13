@@ -34,6 +34,10 @@
 # drat:::add("vimc")                                                          #
 # install.packages("montagu")                                                 #
 #_____________________________________________________________________________#
+
+# Chloe 7/12: note that death rates by age (TDB) and numbers of births will need to be added to this function (or something like it) to be used
+# in the future; existence of that data in input folder currently assumed in functions below.
+
 GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710gavi-5", destpath=NULL) {
   #GET DATA FROM APIdoes not work from KPWA network but tested from my laptop
   #destpath is where you want to put the data - should be same as path in GetDemographicParameters()
@@ -69,7 +73,11 @@ GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710g
 # This function returns a dataset with a row for each year of simulation,     #
 # with total pop, death rate, birth rate, and infant mortality rate           # 
 # ASSUMES FILENAMES CONTAIN: "tot_pop_both", "cdr_both", "cbr_both","imr_both"#
+# Chloe 7/12/19: now assume death rates and numbers of deaths from files
+# called "p_dying_both" and "births" respectively.
 #_____________________________________________________________________________#
+
+# Chloe 7/12/19: kept crude birth rate data in here, but did use another file with number of births calculated.
 
 GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1) {
   setwd(path)
@@ -83,20 +91,33 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   ctrypopfull%>%group_by(country_code)%>%summarize(min(year), max(year))
   
   cbr<-GetFilename(path, "cbr_both")
+  births <- GetFilename(path, "births")
   if (is.character(cbr)==FALSE) { stop(mymsg) }
+  if (is.character(births)==FALSE) { stop(mymsg) }
   dfbirth<-read.csv(cbr)
+  numbirth<-read.csv(births)
   if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfbirth, dfdesc="cbr_both")==FALSE) { stop (filemsg)}
+  if (CheckDemogFileStructure(mycountry=mycountry, mydf=numbirth, dfdesc="births")==FALSE) { stop (filemsg)}
   ctrybirth<-dfbirth[dfbirth$country_code==mycountry, c("country_code", "year", "value")]
+  numbirth_ctry<-numbirth[numbirth$country_code==mycountry, c("country_code", "year", "value")]
   ctrybirthfull<-checkVIMCdates(mydata=ctrybirth, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  numbirthfull<-checkVIMCdates(mydata=numbirth_ctry, startyr=year(start), endyr=year(end), threshold=fillThreshold)
   if (is.data.frame(ctrybirthfull)==FALSE) { stop(paste(datemsg, " cbr_both")) }
+  if (is.data.frame(numbirthfull)==FALSE) { stop(paste(datemsg, " births")) }
   ctrybirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  numbirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
  
-  build1<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
-  colnames(build1)[colnames(build1)=="value.x"] <- "totalpop"
-  colnames(build1)[colnames(build1)=="value.y"] <- "birthrate"
-  build1$births<-build1$totalpop*build1$birthrate
+  build0<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
+  colnames(build0)[colnames(build0)=="value.x"] <- "totalpop"
+  colnames(build0)[colnames(build0)=="value.y"] <- "birthrate"
+  build1 <- merge(x=build0, y=numbirthfull, by=c("country_code", "year"), all=TRUE)
+  colnames(build1)[colnames(build1)=="value"] <- "births"
   
-  #keep empty age_from and age_to from imr file to preserve format
+  # build1$births<-build1$totalpop*build1$birthrate
+  # Chloe 7/12: replaced this crude calculation with WPP estimates, since they use more precise birth rates and further smoothing.
+  
+  # keep empty age_from and age_to from imr file to preserve format
+  # currently infant mortality rates only here.
   imr<-GetFilename(path, "imr_both")
   if (is.character(imr)==FALSE) { stop(mymsg) }
   dfim<-read.csv(imr)
@@ -106,20 +127,166 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   if (is.data.frame(ctryimrfull)==FALSE) { stop(paste(datemsg, " imr_both")) }
   ctryimrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
 
-  build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "year"), all=TRUE)
-  cdr<-GetFilename(path, "cdr_both")
-  if (is.character(cdr)==FALSE) { stop(mymsg) }
-  dfcdr<-read.csv(cdr)
-  if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="cdr_both")==FALSE) { stop (filemsg)}
-  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "year", "value")]
-  ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
-  if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " cdr_both")) }
-  ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
-  build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
-  colnames(build3)[colnames(build3)=="value.x"] <-"imr"
-  colnames(build3)[colnames(build3)=="value.y"] <-"v"
+
+  # build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "year"), all=TRUE)
   
+  # currently other death rate here.
+  # cdr<-GetFilename(path, "cdr_both")
+  # if (is.character(cdr)==FALSE) { stop(mymsg) }
+  # dfcdr<-read.csv(cdr)
+  # if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="cdr_both")==FALSE) { stop (filemsg)}
+  # ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "year", "value")]
+  # ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  # if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " cdr_both")) }
+  # ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  
+  # build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
+  # colnames(build3)[colnames(build3)=="value.x"] <-"imr"
+  # colnames(build3)[colnames(build3)=="value.y"] <-"v"
+  
+  ########################################################################################
+  # Code written by Chloe using probs of dying from abridged death tables, matching by 
+  # current year rather than cohort; testing using matching by cohort below;
+  # if it does not work, remove commenting out of this section.
+  # Chloe 8/23: learned matching of year to current death rate from abridged life tables is correct;
+  # removed commenting from this section, but left commenting in next section to switch between
+  # them quickly.
+  
+  # Chloe 5/22: now, getting all death rates across multiple age groups from single source.
+  dr <- GetFilename(path, "p_dying_both")
+  if (is.character(dr)==FALSE) { stop(mymsg) }
+  dfcdr<-read.csv(dr)
+  if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="p_dying_both")==FALSE) { stop (filemsg)}
+  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "age_to","year","value")]
+  # 
+  # # Chloe 5/22: now, need to switch this to wide format for each year.
+  ctrycdr.wide <- dcast(ctrycdr,country_code+year~age_to,value.var="value")
+  curr.names <- as.numeric(colnames(ctrycdr.wide)[3:ncol(ctrycdr.wide)])
+  for (i in 4:ncol(ctrycdr.wide)){
+    colnames(ctrycdr.wide)[i] <- paste0("dr",curr.names[i-3]+1,curr.names[i-2])
+  }
+  colnames(ctrycdr.wide)[3] <- "imr"
+
+  # # Chloe 5/22: Since these death rates are only available every 5 years, I am assuming they are consistent across each 5-year span.
+  # # However, there is more detailed IMR data available: will retrieve and add later.
+  ctrycdr.new <- ctrycdr.wide %>% slice(rep(1:n(), each = 5))
+  for (i in 1:nrow(ctrycdr.wide)){
+    new.years <- c(ctrycdr.wide$year[i]:(ctrycdr.wide$year[i]+4))
+    first <- which(colnames(ctrycdr.new)=="year")
+    ind1 <- ((i-1)*5)+1
+    ind2 <- (((i-1)*5)+5)
+    ctrycdr.new[ind1:ind2,first] <- new.years
+  }
+  # # Replacing infant morality rates from more general file with ones from more-detailed file.
+  # # Applicable for the first year of age.
+  # # Note the final column only goes through age 84, so I'll assume the same death rate >84 yrs for now.
+  ctryimrfull.part <- ctryimrfull[,-which(colnames(ctryimrfull)=="country_code")]
+  ctrycdr.det <- merge(ctrycdr.new,ctryimrfull.part,by.x="year")
+  ctrycdr.det$imr <- ctrycdr.det$value
+  ctrycdr.det <- ctrycdr.det[,-which(colnames(ctrycdr.det)=="value")]
+
+  ctrycdrfull<-checkVIMCdates(mydata=ctrycdr.det, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " p_dying_both")) }
+  ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  # 
+  # # Chloe 5/22: Making final data frame.
+  build3<-merge(x=build1, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
+  ################################################################################
+  
+  # Added 7/18: assuming years in probs of dying file refer to year of birth,
+  # not current year.
+  # Adding to build2 and ctryimrfull
+  # Chloe 8/23/2019: commented this section out; found out assumptions about death rates 
+  # above were appropriate.
+  # 
+  # dr <- GetFilename(path, "p_dying_both")
+  # if (is.character(dr)==FALSE) { stop(mymsg) }
+  # dfcdr<-read.csv(dr)
+  # if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="p_dying_both")==FALSE) { stop (filemsg)}
+  # ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "age_to","year","value")]
+  # ctrycdr$age_to <- paste0("d",as.character(ctrycdr$age_to))
+  # # Chloe 7/18: this check may not be appropriate any more if the revision to the death rates
+  # # below is used.
+  # 
+  # # Chloe 5/22: now, need to switch this to wide format for each year.
+  # ctrycdr.wide <- dcast(ctrycdr,country_code+year~age_to,value.var="value")
+  # # curr.names <- as.numeric(colnames(ctrycdr.wide)[3:ncol(ctrycdr.wide)])
+  # # for (i in 4:ncol(ctrycdr.wide)){
+  # #   colnames(ctrycdr.wide)[i] <- paste0("dr",curr.names[i-3]+1,curr.names[i-2])
+  # # }
+  # # colnames(ctrycdr.wide)[3] <- "imr"
+  # # Now, I am supporting "year" here refers to birth year, not current year.
+  # # So, if someone born in 1950 makes it to be 10 years old, their death rate will be as written here.
+  # 
+  # # Chloe 5/22: Since these death rates are only available every 5 years, I am assuming they are consistent across each 5-year span.
+  # # However, there is more detailed IMR data available: will retrieve and add later.
+  # ctrycdr.new <- ctrycdr.wide %>% slice(rep(1:n(), each = 5))
+  # for (i in 1:nrow(ctrycdr.wide)){
+  #   new.years <- c(ctrycdr.wide$year[i]:(ctrycdr.wide$year[i]+4))
+  #   first <- which(colnames(ctrycdr.new)=="year")
+  #   ind1 <- ((i-1)*5)+1
+  #   ind2 <- (((i-1)*5)+5)
+  #   ctrycdr.new[ind1:ind2,first] <- new.years
+  # }
+  # 
+  # # Returning to long format, more clearly labeling "year" too.
+  # colnames(ctrycdr.new)[2] <- "birth.year"
+  # ctrycdr.new <- ctrycdr.new[,-3]
+  # ctrycdr.long <- melt(ctrycdr.new,id.vars=c("country_code","birth.year"))
+  # age_to <- rep(NA,nrow(ctrycdr.long))
+  # age_from <- rep(NA,nrow(ctrycdr.long))
+  # for (i in 1:nrow(ctrycdr.long)){
+  #   age_to[i] <- as.numeric(substr(ctrycdr.long$variable[i],2,10))
+  #   age_to[i] <- ifelse(age_to[i]==84,120,age_to[i])
+  #   age_from[i] <- ifelse(age_to[i]==4,1,
+  #                         ifelse(age_to[i]==120,80,age_to[i]-4))
+  # }
+  # ctrycdr.long <- cbind(ctrycdr.long,age_from,age_to)
+  # ctrycdr.long <- ctrycdr.long[with(ctrycdr.long, order(age_from, birth.year)),]
+  # ctrycdr.long$year.from <- ctrycdr.long$birth.year+ctrycdr.long$age_from
+  # ctrycdr.long$year.to <- ctrycdr.long$birth.year+ctrycdr.long$age_to
+  # 
+  # # Now, need to put this back in wide format based on "year.from"
+  # sub.long <- ctrycdr.long[,c(1,3,4,7)]
+  # current.year.dr <- dcast(sub.long,country_code+year.from~variable)
+  # # Unfortunately, I need to relabel columns by hand for now, but might be a 
+  # # clever way of doing this automatically later.
+  # colnames(current.year.dr) <- c("country_code","year","dr1014","dr1519","dr2024","dr2529",
+  #                                "dr3034","dr3539","dr14","dr4044","dr4549","dr5054",
+  #                                "dr5559","dr6064","dr6569","dr7074","dr7579","dr8084","dr59")
+  # current.year.dr <- current.year.dr[,c(1,2,9,19,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18)]
+  # current.year.dr <- current.year.dr[current.year.dr$year<=year(end),]
+  # # Note that death rates for some groups won't be available for early years since life tables
+  # # only go back to 1950, e.g. won't have death rate for 70-year-olds in 1951.
+  # # This might be a problem later.
+  # 
+  # # Will need to fill in with death rates if missing.
+  # # For now, I will borrow from the future.
+  # 
+  # for (j in 4:ncol(current.year.dr)){
+  #   for (i in 1:(nrow(current.year.dr)-1)){
+  #     row <- nrow(current.year.dr)-i
+  #     current.year.dr[row,j] <- ifelse(is.na(current.year.dr[row,j])==TRUE,
+  #                                      current.year.dr[row+1,j],current.year.dr[row,j])
+  #   }
+  # }
+  # # For early years, I think you get the same death rates using old and new method!
+  # 
+  # # CAK 080219: because of the way the ages vs. birth cohorts work, missing a row for
+  # # the first year of the simulation; need to create a row for this year.
+  # old.current.year.dr <- current.year.dr
+  # add <- current.year.dr[1,]
+  # add$year <- 1950
+  # current.year.dr <- rbind(add,old.current.year.dr)
+  # 
+  # # Merging death rates (IMR and from probs of death) with other parameters.
+  # build2 <- merge(x=build1,y=ctryimrfull,by=c("country_code","year"),all=TRUE)
+  # colnames(build2)[6] <- "imr"
+  # build3 <- merge(x=build2,y=current.year.dr,by=c("country_code","year"),all=TRUE)
+
   return(build3)
+  
+  
   
 }
 
@@ -191,7 +358,9 @@ GetPopAgeDist<-function(path, mycountry, start) {
     if (!(DemogNumVarExists("age_to", qqkeep))) { return(FALSE) }
     #check min and max age band - now they all go up to 120 but lets be generous and say 90
     if (min(qqkeep$age_from > 0 || max(qqkeep$age_to) < 90) == FALSE) {
-      qqkeep$ageband<-ifelse(qqkeep$age_from < 30, paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to), "Age_30")
+      # Chloe edit 3/22/19: Removing this line so as to not lump all 30+ groups together and replacing with next one.
+      # qqkeep$ageband<-ifelse(qqkeep$age_from < 30, paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to), "Age_30")
+      qqkeep$ageband<-paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to)
       bands<-qqkeep%>%group_by(country_code, ageband)%>%summarize(tot=sum(value),minage=min(age_from)) 
       totpop<-qqkeep%>%group_by(country_code)%>%summarize(totpop=sum(value))
       if (totpop[,2] > 0) {
@@ -278,10 +447,13 @@ GetDiseaseStateDist<-function(directory, region) {
 #	expandWaifw : called by GetWAIFWmatrix: Expand WAIFW matrices               #
 #      to match monthly population length, output is used by MenA_OneSim      #
 #_____________________________________________________________________________#
+# Chloe edit 3/29: need to expand further to account for higher ages part of sim now.
+# Chloe edit 5/5: left all these new additions to the GetWAIFmatrix() function below.
 expandWaifw<-function(waifw){
   # repeat what was originally columns :
   #b[x,1] 60x; b[x,2] 96x; b[1,3] 84x; b[1,4] 120x
   #needs to go to 361 - add extra line at end for last big bucket
+  # Chloe edit 3/29: see note above.
   rbind ( 
     matrix(data=waifw[c(1,5,9,13)], nrow=60, ncol=4, byrow=TRUE),
     matrix(data=waifw[c(2,6,10,14)], nrow=96, ncol=4, byrow=TRUE),
@@ -302,6 +474,24 @@ GetWAIFWmatrix<-function(path, region) {
   Rwaifw<-waifwin[waifwin$region==region & waifwin$season=='rainy', 4]
   Dwaifw<-waifwin[waifwin$region==region & waifwin$season=='dry', 4]
   wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
+  # Chloe edit 3/29: Need to change dims to suit larger matrix.
+  # Used to have one row per month up until age 30, then the same
+  # value for ages 30 through 100; now need separate row for each month of age from 30 to the end.
+  # i.e. repeating final row values.
+  add.rainy <- array(rep(wboth[361,,1],each=(1441-361)),dim=c(1441-361,4,1))
+  add.dry <- array(rep(wboth[361,,2],each=(1441-361)),dim=c(1441-361,4,1))
+  rainy.new <- rbind(wboth[,,1],add.rainy[,,1])
+  dry.new <- rbind(wboth[,,2],add.dry[,,1])
+  wboth <- array(NA,dim=c(1441,4,2))
+  wboth[,,1] <- rainy.new
+  wboth[,,2] <- dry.new
   dimnames(wboth)[[3]]<-c("rainy", "dry")
   return(wboth)
 }
+
+
+
+
+
+
+

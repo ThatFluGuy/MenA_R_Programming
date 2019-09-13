@@ -22,17 +22,41 @@
 #   WAIFW and dxrisk as small 3D matrices                                     #           
 #_____________________________________________________________________________#
 
+# Chloe note 3/29: input to function from sims code (just so I can name variables while working with function below)
+# startdt=start, enddt=end, pop=initpop,
+# fixedparams=paramfixed, countryparams=myparams,
+# WAIFWmx=wboth, dxr=dxrisk, vacc_program=vacc_program
+
+# Chloe, 3/29: the WAIFW matrix does appear to be age specific, so I'll need to expand it to be
+# appropriate for the older age groups.
+
 MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWmx, dxr, vacc_program) {
   #setup before loop
   theDate <- start
   births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
   imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
-  v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
-  deathvec<-c(rep(imr,12), rep(v, 349))
-  #waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
-  wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA
-  waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 230)) #waning from high to low ab scaled to weeks
-  wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 230)) #waning from low 
+  ind1 <- which(colnames(countryparams)=="dr59")
+  ind2 <- which(colnames(countryparams)=="dr7579")
+  ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(1000*52.1775)
+  ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(1000*52.1775)
+  over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(1000*52.1775)
+  deathvec <- c(rep(imr,12),rep(ages1through4,(12*4)),unlist(rep(ages5through79,each=(12*5))),rep(over80,(40*12)+1))
+  # v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
+  # deathvec<-c(rep(imr,12), rep(v, 349))
+  # deathvec<-c(rep(imr,12), rep(v, 1429))
+  # Chloe: this is where new death rates could be included; at the moment,
+  # has a single death rate for infants and a single death rate for everyone through age 30 (and beyond)
+  # Could start by expanding here.
+  # For now, I'll need to change how often the final value is repeated.
+  # waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
+  # Chloe 5/15: age-dependent rates of waning between stages of immunity;
+  # expanding the final group to all individuals up to age 120.
+  # wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA
+  wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 1310))
+  # waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 230)) #waning from high to low ab scaled to weeks
+  waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 1310))
+  # wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 230)) #waning from low 
+  wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 1310))
   j <- 2 #initialize time interval counter - the first position is filled with starting pop
   iterDate<-start-7 #this will make aging happen the first iteration, like SAS - also supply date for initial pop
   LastMonth <- month(iterDate)
@@ -56,11 +80,21 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
     if (month(theDate)== 1 & LastMonth==12)
     {
       births <-countryparams[countryparams$year==year(theDate), "births"]/52.1775
-      imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
-      v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
+      # imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+      # v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
       #new imr, need to update wanev and death
-      wanev <- c(rep(1-imr, 7), wanev[8:361]) 
-      deathvec<-c(rep(imr,12), rep(v, 349))
+      # wanev <- c(rep(1-imr, 7), wanev[8:361]) 
+      # Chloe 5/15: Update to imr changes wanev first few items, rest stays the same.
+      imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+       wanev <- c(rep(1-imr, 7), wanev[8:1441]) 
+      # deathvec<-c(rep(imr,12), rep(v, 349))
+      # Chloe 5/22: same as above for each year of sim.
+      ind1 <- which(colnames(countryparams)=="dr59")
+      ind2 <- which(colnames(countryparams)=="dr7579")
+      ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(1000*52.1775)
+      ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(1000*52.1775)
+      over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(1000*52.1775)
+      deathvec <- c(rep(imr,12),rep(ages1through4,(12*4)),unlist(rep(ages5through79,each=(12*5))),rep(over80,(40*12)+1))
     }
     
     #  waifw matrix depends on rainy (Mar-Aug) or dry (Sep-Feb) season
@@ -71,7 +105,11 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       else { wmx <- WAIFWmx[,,"dry"]}
       # Determine age-specific per-carrier risk of invasive disease;
       #like infection, this is also seasonal but peaks later, hence different months (rainy here = 6-10 June-Oct)
-      iagevec<-seq(0, 360)
+      # Chloe 5/30: don't follow how this works for now, but replacing with values similar to original for now;
+      # 6/10: confirmed with Mike this should hold.
+      # assuming the age-specific per-carrier risk of invasive disease is the same for anyone over 30.
+      # iagevec<-seq(0, 360)
+      iagevec<-c(seq(0, 360),rep(360,1441-361))
       if (month(theDate) %in% c(1,2,3,4,5,11,12)) {
         sigma = sigmavec<-dxr["dry",1] + dxr["dry",2] *iagevec
       } else {sigmavec<-dxr["rainy",1] + dxr["rainy",2] *iagevec }
@@ -87,12 +125,18 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
     pop[,"Ns",j] <- wanel*pop[,"Ls",j-1] - (deathvec+forcevec)*pop[,"Ns",j-1] + pop[,"Ns",j-1]
     #births - this order is the same as sas (could just add births to line above)
     pop[1,"Ns",j] <- pop[1,"Ns",j] + births
-    pop[,"Nc",j] <- forcevec*pop[,"Ns",j-1] - (deathvec+pf["rc"]+sigmavec) * pop[,"Nc",j-1] + pop[,"Nc",j-1]
-    pop[,"Ls",j] <- waneh*pop[,"Hs",j-1] + pf["rc"]*pop[,"Nc",j-1] - (deathvec+wanel+(1-pf["lc"])*forcevec) * pop[,"Ls",j-1] + pop[,"Ls",j-1]
-    pop[,"Lc",j] <- (1-pf["lc"])*forcevec*pop[,"Ls",j-1] - (deathvec+pf["rc"]+(1-pf["ld"])*sigmavec) * pop[,"Lc",j-1]  + pop[,"Lc",j-1]
-    pop[,"Hs",j] <- pf["rc"]*(pop[,"Lc",j-1] + pop[,"Hc",j-1]) + pf["rd"]*pop[,"Di",j-1]  + wanev*pop[,"Va",j-1] - (deathvec+waneh+(1-pf["hc"])*forcevec) * pop[,"Hs",j-1] + pop[,"Hs",j-1]
-    pop[,"Hc",j] <- (1-pf["hc"])*forcevec*pop[,"Hs",j-1] - (deathvec+pf["rc"]-(1-pf["hd"])*sigmavec)*pop[,"Hc",j-1] + pop[,"Hc",j-1]
-    pop[,"Di",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + (1-pf["hd"])*pop[,"Hc",j-1]) - (deathvec+pf["rd"])*pop[,"Di",j-1] + pop[,"Di",j-1]
+    pop[,"Nc",j] <- forcevec*pop[,"Ns",j-1] - (deathvec+pf["rc"]+sigmavec) * pop[,"Nc",j-1] + 
+      pop[,"Nc",j-1]
+    pop[,"Ls",j] <- waneh*pop[,"Hs",j-1] + pf["rc"]*pop[,"Nc",j-1] - 
+      (deathvec+wanel+(1-pf["lc"])*forcevec) * pop[,"Ls",j-1] + pop[,"Ls",j-1]
+    pop[,"Lc",j] <- (1-pf["lc"])*forcevec*pop[,"Ls",j-1] - 
+      (deathvec+pf["rc"]+(1-pf["ld"])*sigmavec) * pop[,"Lc",j-1]  + pop[,"Lc",j-1]
+    pop[,"Hs",j] <- pf["rc"]*(pop[,"Lc",j-1] + pop[,"Hc",j-1]) + 
+      pf["rd"]*pop[,"Di",j-1]  + wanev*pop[,"Va",j-1] - (deathvec+waneh+(1-pf["hc"])*forcevec) * pop[,"Hs",j-1] + pop[,"Hs",j-1]
+    pop[,"Hc",j] <- (1-pf["hc"])*forcevec*pop[,"Hs",j-1] - 
+      (deathvec+pf["rc"]-(1-pf["hd"])*sigmavec)*pop[,"Hc",j-1] + pop[,"Hc",j-1]
+    pop[,"Di",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + 
+                                (1-pf["hd"])*pop[,"Hc",j-1]) - (deathvec+pf["rd"])*pop[,"Di",j-1] + pop[,"Di",j-1]
     pop[,"Va",j] <- -(deathvec+wanev)* pop[,"Va",j-1] + pop[,"Va",j-1]
     # Count incident cases of invasive disease NOTE THESE ARE before incrementing = use old pop
     pop[,"Inc",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + (1-pf["hd"])*pop[,"Hc",j-1])
@@ -103,11 +147,14 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       for (x in 1:9) {
         #if (x==1) { beforeaging<-pop[,x,j]}
         #save old 361 spot to add to last pot later
-        save361<-pop[[361,x,j]]
+        # Chloe 5/30: now, in over 120 pot.
+        # save361<-pop[[361,x,j]]
+        save1441<-pop[[1441,x,j]]
         #vector to shift: pop[m,x,j]
         pop[,x,j]<-(c(0,  pop[,x,j])[1 : length(pop[,x,j])])
         #move last monthly group into 30+ pot
-        pop[[361,x,j]]<-pop[[361,x,j]] + save361
+        # pop[[361,x,j]]<-pop[[361,x,j]] + save361
+        pop[[1441,x,j]]<-pop[[1441,x,j]] + save1441
       } #end of x loop
       #Vaccinate here, monthly
       if (vacc_program!="none") {

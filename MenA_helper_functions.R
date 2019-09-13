@@ -34,34 +34,80 @@ InitializePopulation<-function(scriptdir, inputdir, start, end, popsize, country
   initmsg<<-""
   #create the matrix
   dur<- ceiling(difftime(end, start, units = "weeks"))
-  poparray <- array(data=0, dim=c(361, 9, dur+1)) # Dimensions are [age groups, states, time]
+  # poparray <- array(data=0, dim=c(361, 9, dur+1)) # Dimensions are [age groups, states, time]
+  # Chloe edit 3/22/19: allow for monthly ages through age 120, including age=0 months.
+  # Later on, for sake of comparison with Montagu estimates, will only look through age 70.
+  # Note this could make code extremely (and unecessarily) slow...maybe just through age 70 if that's the case?
+  poparray <- array(data=0, dim=c(1441, 9, dur+1)) # Dimensions are [age groups, states, time]
   dimnames(poparray)[[2]] <- c("Ns","Nc","Ls","Lc","Hs","Hc","Di","Va", "Inc")
   #parameters for initializing
   mypop<-GetPopAgeDist(path=inputdir, mycountry=country, start=start) 
+  # Chloe edit 3/22/19: Now, this should start with pop size of age bands between 0-4 and 100-120.
+  # Chloe edit 3/29/10: The error message below was originally intended for 7 age bands; 
+  # I'm leaving this unedited for now, since I'm not sure what final groups of age bands we will use. 
   if (length(mypop) < 7) {
     initmsg<<-"Incomplete age distribution information.  Please check the downloaded file [touchstone]_qq_pop_both.csv."
     return(FALSE)
   }
   ##get age-specific proportions of each disease state into vectors: 7 ages X 7 disease states
+  ## Chloe 3/22/19: now, we have 21 ages and 7 disease states.
+  ## The line below gets fraction of each disease state in each of 7 population groups (5-year age bands up to age 30).
+  ## To avoid having too many edits in too many functions, I decided to leave the "GetDiseaseStateDist" function alone, and as before,
+  # assume fractions in each disease state in the 30-year age band match those in the older age bands, i.e. can just repeat the
+  # final 7 values as needed here to provide proportion estimates up to age 120...so, if limiting to age 70 above, will need to edit this.
   statefract<-GetDiseaseStateDist(directory=scriptdir, region=myregion)
   if (length(statefract) < 49) {
     initmsg<<-"Incomplete disease state distribution information.  Please check the file dist_both.csv provided with the scripts."
     return(FALSE)
   }
   #expand age group fraction as vector to match pop matrix dimension 1
+  # Chloe edit 3/22/19: changing this to match new dims; see note above.
+  # agefract <- c(rep(as.numeric(mypop[1:6]), each=60), as.numeric(mypop[7]))
+  # Chloe 3/29: In new age bands, all are 5-year except for last, which is 120 years.
+  agefract <- c(rep(as.numeric(mypop[1:20]), each=60), rep(as.numeric(mypop[21]), each=(12*20)+1))
+  # chunks <- c(rep(60, each=360), 1)
+  # Chloe: Looks as though the starting assumption is that population age bands are evenly divided 
+  # among each included age.
+  chunks <- c(rep(60, each=1200), rep((12*20)+1,each=(12*20)+1))
   
-  agefract <- c(rep(as.numeric(mypop[1:6]), each=60), as.numeric(mypop[7]))
-  chunks <- c(rep(60, each=360), 1)
+  # Exanding this to more age brackets.
+  # statemx<-rbind(
+  #  matrix(rep(statefract[1:7], each=60), nrow=60),
+  #  matrix(rep(statefract[8:14], each=60), nrow=60),
+  #  matrix(rep(statefract[15:21], each=60), nrow=60),
+  #  matrix(rep(statefract[22:28], each=60), nrow=60),
+  #  matrix(rep(statefract[29:35], each=60), nrow=60),
+  #  matrix(rep(statefract[36:42], each=60), nrow=60),
+  #  matrix(rep(statefract[43:49], each=1), nrow=1)
+  # )
   
-  statemx<-rbind(
+  # Assuming last 7 values of statefract (originally just for 30-34 age band) apply to all older ages (which was effectively 
+  # implied before).
+  # Separate matrix for each age chunk,
+  # separate column for disease state, separate row for each month of age.
+   statemx<-rbind(
     matrix(rep(statefract[1:7], each=60), nrow=60),
     matrix(rep(statefract[8:14], each=60), nrow=60),
     matrix(rep(statefract[15:21], each=60), nrow=60),
     matrix(rep(statefract[22:28], each=60), nrow=60),
     matrix(rep(statefract[29:35], each=60), nrow=60),
     matrix(rep(statefract[36:42], each=60), nrow=60),
-    matrix(rep(statefract[43:49], each=1), nrow=1)
-  )
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=60), nrow=60),
+    matrix(rep(statefract[43:49], each=(12*20)+1), nrow=(12*20)+1)
+   )
   #initialize - 3rd dimension stays at 1
   poparray[, "Ns", 1]<-(startSize*agefract/chunks)*statemx[,1]
   poparray[, "Nc", 1]<-(startSize*agefract/chunks)*statemx[,2]
