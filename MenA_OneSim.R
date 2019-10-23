@@ -30,7 +30,32 @@
 # Chloe, 3/29: the WAIFW matrix does appear to be age specific, so I'll need to expand it to be
 # appropriate for the older age groups.
 
-MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWmx, dxr, vacc_program) {
+# Eric, 10/23: Lots of changes.  Moved dxrisk, waifw, population setup to inside function.  Split vaccinated status into Vs, Vc.  
+#              Many calls to fp, the fixed parameters generated via model calibration.  Changed syntax from fp["rc"] to fp$rc to
+#              ensure that the result is a vector.  I do not think any hard-coded parameters remain in this code or helper functions.
+MenASimulation<-function(startdt, enddt, fp, vacc_program, countryparams, region, country, inputdir) { 
+  #setup before loop
+  #disease model for rainy and dry
+  dxrisk<-rbind(c(fp$dr1, fp$dr2),
+                c(fp$dd1, fp$dd2))
+  dimnames(dxrisk)[[1]]<-c("rainy", "dry")
+  
+  #WAIFW matrix setup
+  wboth<-GetWAIFWmatrix(params=fp)
+  if (!(is.numeric(wboth))) {
+    stop("WAIFW matrix is not numeric")
+  }
+  
+  #initialize population
+  startSize <- countryparams[countryparams$year==year(start)-1, "totalpop"]
+  pop<-InitializePopulation(scriptdir=script.dir, inputdir=inputdir, start=startdt, end=enddt, country=country, region=region, startSize=startSize)
+  #check for errors
+  if (!(is.numeric(pop))) {
+    if (disterr!="") { print(disterr) } 
+    if (dxerr!="") { print(dxerr) } 
+    stop(initmsg)
+  }
+  
   #setup before loop
   theDate <- start
   births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
@@ -51,12 +76,21 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
   # waning age-group vectors 0-5mo, 6mo-2y, 3-10y, 11+y
   # Chloe 5/15: age-dependent rates of waning between stages of immunity;
   # expanding the final group to all individuals up to age 120.
+  
   # wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 230))  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA
-  wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 1310))
   # waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 230)) #waning from high to low ab scaled to weeks
-  waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 1310))
   # wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 230)) #waning from low 
-  wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 1310))
+  
+
+  #wanev <- c(rep(1-imr, 7), rep(0.000172, 17), rep(0.000096, 107), rep(0.000307, 1310)) #Chloe's edits
+  #waneh <- c(rep(0.01092, 6), rep(0.00654, 18), rep(0.00527, 107), rep(0.00096, 1310))
+  #wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 1310))
+
+  #EJ: replace hard-coded parameters with references to fp, the fixed parameter input to OneSim.
+  wanev <- c(rep((1-imr)*52.1775, 7), rep(fp$wvh2, 17), rep(fp$wvh3, 107), rep(fp$whv4, 1310))/52.1775  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA     This section is weird in the earliest age group.
+  waneh <- c(rep(fp$whl1, 6), rep(fp$whl2, 18), rep(fp$whl3, 107), rep(fp$whl4, 1310))/52.1775 #waning from high to low ab scaled to weeks.  Also, check if dividing by 52.1775 is valid.
+  wanel <- c(rep(fp$wln1,6), rep(fp$wln1, 18), rep(fp$wln1, 107), rep(fp$wln1, 1310))/52.1775 #waning from low 
+  
   j <- 2 #initialize time interval counter - the first position is filled with starting pop
   iterDate<-start-7 #this will make aging happen the first iteration, like SAS - also supply date for initial pop
   LastMonth <- month(iterDate)
@@ -100,9 +134,9 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
     #  waifw matrix depends on rainy (Mar-Aug) or dry (Sep-Feb) season
     if (month(theDate)!=LastMonth) {
       if (month(theDate) %in% c(3,4,5,6,7,8)) { 
-        wmx <- WAIFWmx[,,"rainy"]
+        wmx <- wboth[,,"rainy"]
       } 
-      else { wmx <- WAIFWmx[,,"dry"]}
+      else { wmx <- wboth[,,"dry"]}
       # Determine age-specific per-carrier risk of invasive disease;
       #like infection, this is also seasonal but peaks later, hence different months (rainy here = 6-10 June-Oct)
       # Chloe 5/30: don't follow how this works for now, but replacing with values similar to original for now;
@@ -111,35 +145,37 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
       # iagevec<-seq(0, 360)
       iagevec<-c(seq(0, 360),rep(360,1441-361))
       if (month(theDate) %in% c(1,2,3,4,5,11,12)) {
-        sigma = sigmavec<-dxr["dry",1] + dxr["dry",2] *iagevec
-      } else {sigmavec<-dxr["rainy",1] + dxr["rainy",2] *iagevec }
+        sigma = sigmavec<-dxrisk["dry",1] + dxrisk["dry",2] *iagevec
+      } else {sigmavec<-dxrisk["rainy",1] + dxrisk["rainy",2] *iagevec }
     } #end of updates conditional on month
     
     #infectious ratios by pop age group (for calculating force) this happens every time point
     IR<-GetInfectiveRatio(t(pop[,,j-1]))
     # Includes force of infection from outside the population (foii, was for in SAS code)
-    pf<-fixedparams
-    forcevec <- (sto*wmx[,1]*IR[1]) + (sto*wmx[,2]*IR[2]) + (sto*wmx[,3]*IR[3])+ (sto*wmx[,4]*IR[4]) + pf["foii"]
+    forcevec <- (sto*wmx[,1]*IR[1]) + (sto*wmx[,2]*IR[2]) + (sto*wmx[,3]*IR[3])+ (sto*wmx[,4]*IR[4]) + fp$foii
     
-    #vectorized (1-361) calculations instead of loop
+    
+    
+    #Transitions from previous time period to current time period
     pop[,"Ns",j] <- wanel*pop[,"Ls",j-1] - (deathvec+forcevec)*pop[,"Ns",j-1] + pop[,"Ns",j-1]
     #births - this order is the same as sas (could just add births to line above)
     pop[1,"Ns",j] <- pop[1,"Ns",j] + births
-    pop[,"Nc",j] <- forcevec*pop[,"Ns",j-1] - (deathvec+pf["rc"]+sigmavec) * pop[,"Nc",j-1] + 
+    pop[,"Nc",j] <- forcevec*pop[,"Ns",j-1] - (deathvec+fp$rc+sigmavec) * pop[,"Nc",j-1] + 
       pop[,"Nc",j-1]
-    pop[,"Ls",j] <- waneh*pop[,"Hs",j-1] + pf["rc"]*pop[,"Nc",j-1] - 
-      (deathvec+wanel+(1-pf["lc"])*forcevec) * pop[,"Ls",j-1] + pop[,"Ls",j-1]
-    pop[,"Lc",j] <- (1-pf["lc"])*forcevec*pop[,"Ls",j-1] - 
-      (deathvec+pf["rc"]+(1-pf["ld"])*sigmavec) * pop[,"Lc",j-1]  + pop[,"Lc",j-1]
-    pop[,"Hs",j] <- pf["rc"]*(pop[,"Lc",j-1] + pop[,"Hc",j-1]) + 
-      pf["rd"]*pop[,"Di",j-1]  + wanev*pop[,"Va",j-1] - (deathvec+waneh+(1-pf["hc"])*forcevec) * pop[,"Hs",j-1] + pop[,"Hs",j-1]
-    pop[,"Hc",j] <- (1-pf["hc"])*forcevec*pop[,"Hs",j-1] - 
-      (deathvec+pf["rc"]-(1-pf["hd"])*sigmavec)*pop[,"Hc",j-1] + pop[,"Hc",j-1]
-    pop[,"Di",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + 
-                                (1-pf["hd"])*pop[,"Hc",j-1]) - (deathvec+pf["rd"])*pop[,"Di",j-1] + pop[,"Di",j-1]
-    pop[,"Va",j] <- -(deathvec+wanev)* pop[,"Va",j-1] + pop[,"Va",j-1]
+    pop[,"Ls",j] <- waneh*pop[,"Hs",j-1] + fp$rc*pop[,"Nc",j-1] - 
+      (deathvec+wanel+(1-fp$lc)*forcevec) * pop[,"Ls",j-1] + pop[,"Ls",j-1]
+    pop[,"Lc",j] <- (1-fp$lc)*forcevec*pop[,"Ls",j-1] - 
+      (deathvec+fp$rc+(1-fp$ld)*sigmavec) * pop[,"Lc",j-1]  + pop[,"Lc",j-1]
+    pop[,"Hs",j] <- fp$rc*(pop[,"Lc",j-1] + pop[,"Hc",j-1]) + 
+      fp$rd*pop[,"Di",j-1]  + wanev*pop[,"Vs",j-1] - (deathvec+waneh+(1-fp$hc)*forcevec) * pop[,"Hs",j-1] + pop[,"Hs",j-1] #waning from Vs instead of Va
+    pop[,"Hc",j] <- (1-fp$hc)*forcevec*pop[,"Hs",j-1] - 
+      (deathvec+fp$rc-(1-fp$hd)*sigmavec)*pop[,"Hc",j-1] + wanev*pop[,"Vc",j-1] + pop[,"Hc",j-1] #added waning from Vc
+    pop[,"Di",j] <- sigmavec*(pop[,"Nc",j-1] + (1-fp$ld)*pop[,"Lc",j-1] + 
+      (1-fp$hd)*pop[,"Hc",j-1]) - (deathvec+fp$rd)*pop[,"Di",j-1] + pop[,"Di",j-1]
+    pop[,"Vs",j] <- pop[,"Vs",j-1]  - wanev*pop[,"Vs",j-1] - deathvec*pop[,"Vs",j-1] +  fp$rc*pop[,"Vc",j-1]  #ways of moving out of Vs: wane to Hs, death.  Moving in requires the vaccinate function, or recovering from Vc
+    pop[,"Vc",j] <- pop[,"Vc",j-1] -  fp$rc*pop[,"Vc",j-1] - wanev*pop[,"Vc",j-1] - deathvec*pop[,"Vc",j-1] #ways of moving out of Vc: wane to Hc, recover from Vc to Vs, death.  Moving in requires the vaccinate function
     # Count incident cases of invasive disease NOTE THESE ARE before incrementing = use old pop
-    pop[,"Inc",j] <- sigmavec*(pop[,"Nc",j-1] + (1-pf["ld"])*pop[,"Lc",j-1] + (1-pf["hd"])*pop[,"Hc",j-1])
+    pop[,"Inc",j] <- sigmavec*(pop[,"Nc",j-1] + (1-fp$ld)*pop[,"Lc",j-1] + (1-fp$hd)*pop[,"Hc",j-1])
     #Inc[,j] <- sigmavec*(pop[,"Nc",j-1] + (1-ld)*pop[,"Lc",j-1] + (1-hd)*pop[,"Hc",j-1])
     
     #aging handled monthly ** THIS WORKS **aging incident cases too
@@ -161,12 +197,12 @@ MenASimulation<-function(startdt, enddt, pop, fixedparams, countryparams, WAIFWm
         #there are some cases where theres nothing to do in many years
         if  (vacc_program=="campaign") { 
           if (year(theDate) %in% nodoses==FALSE) {
-            pop[,,j] <- vaccinate(popslice=pop[,,j], vlookup=myvacc, type=vacc_program, mydate=theDate)
+            pop[,,j] <- vaccinate(popslice=pop[,,j], vlookup=myvacc, type=vacc_program, mydate=theDate, params=fp)
             #print("vaccinating")
           }
         }
         else {
-          pop[,,j] <- vaccinate(popslice=pop[,,j], vlookup=myvacc, type=vacc_program, mydate=theDate)
+          pop[,,j] <- vaccinate(popslice=pop[,,j], vlookup=myvacc, type=vacc_program, mydate=theDate, params=fp)
           #print("vaccinating")
         }
       }

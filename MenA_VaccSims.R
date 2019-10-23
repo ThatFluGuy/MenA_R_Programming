@@ -39,9 +39,12 @@ sd<-4567 #seed for random sto, use same for all scenarios
 nSims<-10  #100 takes ~ 3 mon, 1000 takes 45
 #directory containing inputs from https://montagu.vaccineimpact.org/
 inputdir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/201810synthetic_downloaded_2019"
-outputdir<-"C:/Users/krakcx1/Desktop/Sim_output"
+#outputdir<-"C:/Users/krakcx1/Desktop/Sim_output"
+outputdir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Scratch/Temporary output directory"
+
 #directory containing R scripts
-script.dir <- "C:/Users/krakcx1/Desktop/Cloned_meningitis_code"
+#script.dir <- "C:/Users/krakcx1/Desktop/Cloned_meningitis_code"
+script.dir <- "H:/Git/MenA R"
 ###end parameters to set 
 
 #script directory contains functions
@@ -90,36 +93,21 @@ if (vacc_program!="none") {
   }
 }
 
-#fixed parameters
+
 #uSE SAME SEED FOR ALL SCENARIOS (for setting up stochastic parameter)
 set.seed(sd, kind = NULL, normal.kind = NULL)
-paramfixed<-c(0.23334,0.70002,0.25,0.90,0.75,1.00,0.00000096)
-names(paramfixed)<-c("rc","rd","lc","ld","hc","hd","foii")
-#disease model for rainy and dry
-dxrisk<-rbind(c(0.0018, -0.00000021),
-              c(0.0019, -0.0000002))
-dimnames(dxrisk)[[1]]<-c("rainy", "dry")
-#WAIFW matrix setup
-wboth<-GetWAIFWmatrix(path=script.dir, region=myregion)
-if (!(is.numeric(wboth))) {
-  stop(waifwerr)
-}
+#Read in parameters calculated in ABC, or a row of parameters to be used by ABC.  Points to model_params.csv
+#This file should supply all calibrated parameters, removing all hard-coding throughout the model.
+paramfixed <- GetModelParams(path=inputdir, region.val=myregion)
 
-#initialize population
-startSize <- myparams[myparams$year==year(start)-1, "totalpop"]
-initpop<-InitializePopulation(scriptdir=script.dir, inputdir=inputdir, start=start, end=end, popsize=startSize, country=mycountry, region=myregion)
-#check for errors
-if (!(is.numeric(initpop))) {
-  if (disterr!="") { print(disterr) } 
-  if (dxerr!="") { print(dxerr) } 
-  stop(initmsg)
-}
+
+
+
 #begin simulations
 my_data <- list()
 for (n in 1:nSims) {
-  finalpop<-MenASimulation(startdt=start, enddt=end, pop=initpop,
-                           fixedparams=paramfixed, countryparams=myparams,
-                           WAIFWmx=wboth, dxr=dxrisk, vacc_program=vacc_program)
+  finalpop<-MenASimulation(startdt=start, enddt=end, fp=paramfixed, vacc_program=vacc_program,
+                           countryparams=myparams, region=myregion, country=mycountry, inputdir=inputdir)
   #head(finalpop[,"Inc", 200:225])
   summarizeme<-1
   if (summarizeme > 0) {

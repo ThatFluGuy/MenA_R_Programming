@@ -14,7 +14,7 @@
 #_____________________________________________________________________________#
 
 
-getCohortSize<-function(poparray) {
+getCohortSize<-function(poparray) { #updates needed
   #cohort size - sum 2nd dimension except Inc / only need to do once - first simulation
   #modify 3/14/18 - need to split 30+ pot into ages 30-70
   # Chloe 5/30: no need to split 30+ pot since it's now split.
@@ -43,7 +43,7 @@ getCohortSize<-function(poparray) {
 }
 
 
-summarizeOneSim<-function(poparray, n, cfr) {
+summarizeOneSim<-function(poparray, n, cfr) {  #updates needed
   #summarize incident cases by year and year of age, calculate deaths and DALYs
   inclong<-(melt(poparray[,"Inc",]))
   inclong$RealDate<-as.Date(inclong[,2], origin="1970-01-01")

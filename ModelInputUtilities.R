@@ -441,55 +441,51 @@ GetDiseaseStateDist<-function(directory, region) {
   return(statefract)
 }
 
-#_____________________________________________________________________________#                                                                  #
-# Get WAIFWmatrix: Reads waifw_both.csv, which is supplied with scripts;      # 
-# format should not vary                                                      #
-#	expandWaifw : called by GetWAIFWmatrix: Expand WAIFW matrices               #
-#      to match monthly population length, output is used by MenA_OneSim      #
-#_____________________________________________________________________________#
+#______________________________________________________________________________________#                                                                  #
+# Get WAIFWmatrix: constructs expanded WAIFW matrix from supplied parameter data frame;# 
+#______________________________________________________________________________________#
 # Chloe edit 3/29: need to expand further to account for higher ages part of sim now.
 # Chloe edit 5/5: left all these new additions to the GetWAIFmatrix() function below.
-expandWaifw<-function(waifw){
-  # repeat what was originally columns :
-  #b[x,1] 60x; b[x,2] 96x; b[1,3] 84x; b[1,4] 120x
-  #needs to go to 361 - add extra line at end for last big bucket
-  # Chloe edit 3/29: see note above.
-  rbind ( 
-    matrix(data=waifw[c(1,5,9,13)], nrow=60, ncol=4, byrow=TRUE),
-    matrix(data=waifw[c(2,6,10,14)], nrow=96, ncol=4, byrow=TRUE),
-    matrix(data=waifw[c(3,7,11,15)], nrow=84, ncol=4, byrow=TRUE),
-    matrix(data=waifw[c(4,8,12,16)], nrow=121, ncol=4, byrow=TRUE)
-  )
-  
-}
-
-GetWAIFWmatrix<-function(path, region) {
-  setwd(path)
-  waifwfile<-GetFilename(path, "WAIFW_both.csv")
-  if (is.character(waifwfile)==FALSE) { 
-    stop(mymsg) 
-    print("File [waifw_both.csv] is packaged with the R scripts and should be in the same directory.")
-  }
-  waifwin<-read.csv(waifwfile, stringsAsFactors = FALSE)  #vector
-  Rwaifw<-waifwin[waifwin$region==region & waifwin$season=='rainy', 4]
-  Dwaifw<-waifwin[waifwin$region==region & waifwin$season=='dry', 4]
-  wboth<-array(c(expandWaifw(waifw=Rwaifw), expandWaifw(waifw=Dwaifw)), dim=c(361,4,2))
-  # Chloe edit 3/29: Need to change dims to suit larger matrix.
-  # Used to have one row per month up until age 30, then the same
-  # value for ages 30 through 100; now need separate row for each month of age from 30 to the end.
-  # i.e. repeating final row values.
-  add.rainy <- array(rep(wboth[361,,1],each=(1441-361)),dim=c(1441-361,4,1))
-  add.dry <- array(rep(wboth[361,,2],each=(1441-361)),dim=c(1441-361,4,1))
-  rainy.new <- rbind(wboth[,,1],add.rainy[,,1])
-  dry.new <- rbind(wboth[,,2],add.dry[,,1])
-  wboth <- array(NA,dim=c(1441,4,2))
-  wboth[,,1] <- rainy.new
-  wboth[,,2] <- dry.new
+# EJ 10/23: simplify the WAIFW construction, base it on the parameter input to OneSim instead of external csv.  Expand in one step instead of two.  Implement five age group WAIFW version.
+GetWAIFWmatrix<-function(params) {
+  Rwaifw <- matrix(0, nrow=5, ncol=5)
+  Rwaifw[1,] <- rep(params$bd1, 5)
+  Rwaifw[2,] <- rep(params$bd2, 5)
+  Rwaifw[3,] <- c(rep(params$bd3, 2), params$bd4, rep(params$bd3, 2))
+  Rwaifw[4,] <- c(rep(params$bd5, 3), params$bd6, rep(params$bd5, 1))
+  Rwaifw[5,] <- rep(params$bd7, 5)
+  Dwaifw <- Rwaifw * params$br
+  Rwaifw.expanded <- Rwaifw[rep(seq_len(nrow(Rwaifw)), times=c(60, 60, 60, 60, 1201)),] #Replicates the first 4 rows 60 times, the last row 1201 times.  One row per month, so ages 0-4, 5-9, 10-14, 15-19, 20-120
+  Dwaifw.expanded <- Dwaifw[rep(seq_len(nrow(Dwaifw)), times=c(60, 60, 60, 60, 1201)),]
+  wboth <- array(data=NA, dim=c(1441, 5, 2))
+  wboth[,,1] <- Rwaifw.expanded
+  wboth[,,2] <- Dwaifw.expanded
   dimnames(wboth)[[3]]<-c("rainy", "dry")
   return(wboth)
 }
 
 
+
+
+
+#_____________________________________________________________________________#
+# GetModelParams: Reads model_params.csv, which is supplied with scripts;     # 
+# Two rows; one for region="hyper", one region="nonhyper"                     #
+# Returns a one-row dataframe from the appropriate region                     #
+# Goal is to prevent hard-coding of parameters in model                       #
+#_____________________________________________________________________________#
+
+GetModelParams<-function(path, region.val) {
+  setwd(path)
+  param.file <-GetFilename(path, "model_params.csv")
+  if (is.character(param.file)==FALSE) { 
+    stop(mymsg) 
+    print("File [model_params.csv] is packaged with the R scripts and should be in the same directory.")
+  }
+  params <- read.csv(param.file, stringsAsFactors = FALSE)  #data frame
+  params.region <- subset(params, region==region.val)
+  return(params.region)
+}
 
 
 
