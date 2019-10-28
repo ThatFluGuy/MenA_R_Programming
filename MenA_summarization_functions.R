@@ -14,11 +14,11 @@
 #_____________________________________________________________________________#
 
 
-getCohortSize<-function(poparray) { #updates needed
+getCohortSize<-function(poparray) { 
   #cohort size - sum 2nd dimension except Inc / only need to do once - first simulation
   #modify 3/14/18 - need to split 30+ pot into ages 30-70
   # Chloe 5/30: no need to split 30+ pot since it's now split.
-    cohort<-apply(poparray[,1:8,], c(1,3), sum) # only a little slow
+    cohort<-apply(poparray[,1:9,], c(1,3), sum) # only a little slow / EJ edit: Va -> Vs, Vc.  Column 10 is Inc(idence), not used here.
     cohortlong<-melt(cohort)
     cohortlong$RealDate<-as.Date(cohortlong[,2], origin="1970-01-01")
     cohortlong$IterYear<-year(cohortlong$RealDate)
@@ -43,7 +43,7 @@ getCohortSize<-function(poparray) { #updates needed
 }
 
 
-summarizeOneSim<-function(poparray, n, cfr) {  #updates needed
+summarizeOneSim<-function(poparray, n, cfr) { 
   #summarize incident cases by year and year of age, calculate deaths and DALYs
   inclong<-(melt(poparray[,"Inc",]))
   inclong$RealDate<-as.Date(inclong[,2], origin="1970-01-01")

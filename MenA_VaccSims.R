@@ -20,6 +20,7 @@
 #    adapted from Mike Jackson's SAS version                                  #
 #_____________________________________________________________________________#
 library(lubridate)
+library(doParallel)
 library(dplyr)
 library(data.table) #melt
 # Chloe 2/5/19: Added package to use data.table
@@ -36,7 +37,7 @@ PSA <- FALSE
 vacc_program <- "none" ## "campaign" or "routine" or "both" or "none"
 phi<-0.2
 sd<-4567 #seed for random sto, use same for all scenarios
-nSims<-10  #100 takes ~ 3 mon, 1000 takes 45
+nSims<-100  #Update: 100 takes around 12 minutes if using 4 cores.
 #directory containing inputs from https://montagu.vaccineimpact.org/
 inputdir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/201810synthetic_downloaded_2019"
 #outputdir<-"C:/Users/krakcx1/Desktop/Sim_output"
@@ -100,27 +101,45 @@ set.seed(sd, kind = NULL, normal.kind = NULL)
 #This file should supply all calibrated parameters, removing all hard-coding throughout the model.
 paramfixed <- GetModelParams(path=inputdir, region.val=myregion)
 
+#initialize population
+startSize <- myparams[myparams$year==year(start)-1, "totalpop"]
+initpop<-InitializePopulation(scriptdir=script.dir, inputdir=inputdir, start=start, end=end, country=mycountry, region=myregion, startSize=startSize)
+#check for errors
+if (!(is.numeric(initpop))) {
+  if (disterr!="") { print(disterr) } 
+  if (dxerr!="") { print(dxerr) } 
+  stop(initmsg)
+}
+
+summarizeme<-1
 
 
 
 #begin simulations
-my_data <- list()
-for (n in 1:nSims) {
-  finalpop<-MenASimulation(startdt=start, enddt=end, fp=paramfixed, vacc_program=vacc_program,
+#TODO: consider starting seed values for replicability.  Currently unlikely to produce identical results when re-run.
+cl <- makeCluster(4)  #scale this upwards if you're on a workstation with >16gb memory
+registerDoParallel(cl)
+my_data <- foreach(n=1:nSims, .verbose=TRUE, .packages = c("lubridate", "dplyr", "data.table", "reshape2")) %dopar% {
+  finalpop<-MenASimulation(startdt=start, enddt=end, fp=paramfixed, initpop=initpop, vacc_program=vacc_program,
                            countryparams=myparams, region=myregion, country=mycountry, inputdir=inputdir)
-  #head(finalpop[,"Inc", 200:225])
-  summarizeme<-1
   if (summarizeme > 0) {
     #age-specific death rates (for PSA=no, other option not implemented yet)
     cfr <- c(0.106, 0.096, 0.089, 0.086, 0.079, 0.122) #used AFTER simulation macro in SAS
-    my_data[[n]] <-summarizeOneSim(finalpop, n, cfr)
-    if (n==1) {
-      cohortSize<-getCohortSize(finalpop)
-      totalPop<-cohortSize%>%group_by(IterYear)%>%summarize(tot=sum(cohortsize))
-      #for checking by plotting
-    }
-  } #end of conditional summarization
-} #end of looping nSims simulations
+    summarizeOneSim(finalpop, n, cfr)
+    } #end of conditional summarization
+} #end of foreach loop
+stopCluster(cl)
+#for checking by plotting
+for.size <- MenASimulation(startdt=start, enddt=end, fp=paramfixed, initpop=initpop, vacc_program=vacc_program,
+                         countryparams=myparams, region=myregion, country=mycountry, inputdir=inputdir)
+cohortSize<-getCohortSize(for.size)
+totalPop<-cohortSize%>%group_by(IterYear)%>%summarize(tot=sum(cohortsize))
+rm(for.size)
+
+
+
+
+
 #final summarization
 filename = paste0(mycountry, "_", vacc_program, "_", Sys.Date(), ".csv")
 #detail output - for testing

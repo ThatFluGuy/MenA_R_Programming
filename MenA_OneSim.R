@@ -33,7 +33,7 @@
 # Eric, 10/23: Lots of changes.  Moved dxrisk, waifw, population setup to inside function.  Split vaccinated status into Vs, Vc.  
 #              Many calls to fp, the fixed parameters generated via model calibration.  Changed syntax from fp["rc"] to fp$rc to
 #              ensure that the result is a vector.  I do not think any hard-coded parameters remain in this code or helper functions.
-MenASimulation<-function(startdt, enddt, fp, vacc_program, countryparams, region, country, inputdir) { 
+MenASimulation<-function(startdt, enddt, fp, initpop, vacc_program, countryparams, region, country, inputdir) { 
   #setup before loop
   #disease model for rainy and dry
   dxrisk<-rbind(c(fp$dr1, fp$dr2),
@@ -46,16 +46,8 @@ MenASimulation<-function(startdt, enddt, fp, vacc_program, countryparams, region
     stop("WAIFW matrix is not numeric")
   }
   
-  #initialize population
-  startSize <- countryparams[countryparams$year==year(start)-1, "totalpop"]
-  pop<-InitializePopulation(scriptdir=script.dir, inputdir=inputdir, start=startdt, end=enddt, country=country, region=region, startSize=startSize)
-  #check for errors
-  if (!(is.numeric(pop))) {
-    if (disterr!="") { print(disterr) } 
-    if (dxerr!="") { print(dxerr) } 
-    stop(initmsg)
-  }
-  
+  pop <- initpop
+ 
   #setup before loop
   theDate <- start
   births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
