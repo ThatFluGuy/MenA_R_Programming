@@ -96,7 +96,7 @@ if (vacc_program!="none") {
 
 
 #uSE SAME SEED FOR ALL SCENARIOS (for setting up stochastic parameter)
-set.seed(sd, kind = NULL, normal.kind = NULL)
+
 #Read in parameters calculated in ABC, or a row of parameters to be used by ABC.  Points to model_params.csv
 #This file should supply all calibrated parameters, removing all hard-coding throughout the model.
 paramfixed <- GetModelParams(path=inputdir, region.val=myregion)
@@ -112,14 +112,17 @@ if (!(is.numeric(initpop))) {
 }
 
 summarizeme<-1
+#set the random number seed based on sd, then create a vector of random number seeds (consistent within sd values)
+set.seed(sd, kind = NULL, normal.kind = NULL)
+seed.vec <- unique(floor(runif(nSims*2, 0, 1000000)))[1:nSims]
 
 
 
 #begin simulations
-#TODO: consider starting seed values for replicability.  Currently unlikely to produce identical results when re-run.
 cl <- makeCluster(4)  #scale this upwards if you're on a workstation with >16gb memory
 registerDoParallel(cl)
 my_data <- foreach(n=1:nSims, .verbose=TRUE, .packages = c("lubridate", "dplyr", "data.table", "reshape2")) %dopar% {
+  set.seed(seed.vec[n], kind = NULL, normal.kind = NULL)
   finalpop<-MenASimulation(startdt=start, enddt=end, fp=paramfixed, initpop=initpop, vacc_program=vacc_program,
                            countryparams=myparams, region=myregion, country=mycountry, inputdir=inputdir)
   if (summarizeme > 0) {
