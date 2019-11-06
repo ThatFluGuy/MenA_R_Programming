@@ -117,6 +117,9 @@ set.seed(sd, kind = NULL, normal.kind = NULL)
 seed.vec <- unique(floor(runif(nSims*2, 0, 1000000)))[1:nSims]
 
 
+paramfixed <- paramfixed[3,] #choose a row at random to verify that the program is working
+
+
 
 #begin simulations
 cl <- makeCluster(4)  #scale this upwards if you're on a workstation with >16gb memory

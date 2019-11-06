@@ -448,13 +448,13 @@ GetDiseaseStateDist<-function(directory, region) {
 # Chloe edit 5/5: left all these new additions to the GetWAIFmatrix() function below.
 # EJ 10/23: simplify the WAIFW construction, base it on the parameter input to OneSim instead of external csv.  Expand in one step instead of two.  Implement five age group WAIFW version.
 GetWAIFWmatrix<-function(params) {
-  Rwaifw <- matrix(0, nrow=5, ncol=5)
-  Rwaifw[1,] <- rep(params$bd1, 5)
-  Rwaifw[2,] <- rep(params$bd2, 5)
-  Rwaifw[3,] <- c(rep(params$bd3, 2), params$bd4, rep(params$bd3, 2))
-  Rwaifw[4,] <- c(rep(params$bd5, 3), params$bd6, rep(params$bd5, 1))
-  Rwaifw[5,] <- rep(params$bd7, 5)
-  Dwaifw <- Rwaifw * params$br
+  Dwaifw <- matrix(0, nrow=5, ncol=5)
+  Dwaifw[1,] <- rep(params$bd1, 5)
+  Dwaifw[2,] <- rep(params$bd2, 5)
+  Dwaifw[3,] <- c(rep(params$bd3, 2), params$bd4, rep(params$bd3, 2))
+  Dwaifw[4,] <- c(rep(params$bd5, 3), params$bd6, rep(params$bd5, 1))
+  Dwaifw[5,] <- rep(params$bd7, 5)
+  Rwaifw <- Dwaifw * params$br
   Rwaifw.expanded <- Rwaifw[rep(seq_len(nrow(Rwaifw)), times=c(60, 60, 60, 60, 1201)),] #Replicates the first 4 rows 60 times, the last row 1201 times.  One row per month, so ages 0-4, 5-9, 10-14, 15-19, 20-120
   Dwaifw.expanded <- Dwaifw[rep(seq_len(nrow(Dwaifw)), times=c(60, 60, 60, 60, 1201)),]
   wboth <- array(data=NA, dim=c(1441, 5, 2))
@@ -477,10 +477,10 @@ GetWAIFWmatrix<-function(params) {
 
 GetModelParams<-function(path, region.val) {
   setwd(path)
-  param.file <-GetFilename(path, "model_params.csv")
+  param.file <-GetFilename(path, "posterior_parameters.csv")
   if (is.character(param.file)==FALSE) { 
     stop(mymsg) 
-    print("File [model_params.csv] is packaged with the R scripts and should be in the same directory.")
+    print("File [posterior_parameters.csv] is packaged with the R scripts and should be in the same directory.")
   }
   params <- read.csv(param.file, stringsAsFactors = FALSE)  #data frame
   params.region <- subset(params, region==region.val)

@@ -79,9 +79,9 @@ MenASimulation<-function(startdt, enddt, fp, initpop, vacc_program, countryparam
   #wanel <- c(rep(0.00970,6), rep(0.00487, 18), rep(0.00364, 107), rep(0.00057, 1310))
 
   #EJ: replace hard-coded parameters with references to fp, the fixed parameter input to OneSim.
-  wanev <- c(rep((1-imr)*52.1775, 7), rep(fp$wvh2, 17), rep(fp$wvh3, 107), rep(fp$wvh4, 1310))/52.1775  #waning from vacc to hi ab scaled to wks-confirm wv(1) = NA     This section is weird in the earliest age group.
-  waneh <- c(rep(fp$whl1, 6), rep(fp$whl2, 18), rep(fp$whl3, 107), rep(fp$whl4, 1310))/52.1775 #waning from high to low ab scaled to weeks.  Also, check if dividing by 52.1775 is valid.
-  wanel <- c(rep(fp$wln1,6), rep(fp$wln1, 18), rep(fp$wln1, 107), rep(fp$wln1, 1310))/52.1775 #waning from low 
+  wanev <- c(rep((1-imr), 7), rep(fp$wv2, 17), rep(fp$wv3, 107), rep(fp$wv4, 1310))  #waning from vacc to hi     This section is weird in the earliest age group.
+  waneh <- c(rep(fp$wh1, 6),  rep(fp$wh2, 18), rep(fp$wh3, 107), rep(fp$wh4, 1310)) #waning from high to low
+  wanel <- c(rep(fp$wl1,6),   rep(fp$wl2, 18), rep(fp$wl3, 107), rep(fp$wl4, 1310)) #waning from low 
   
   j <- 2 #initialize time interval counter - the first position is filled with starting pop
   iterDate<-start-7 #this will make aging happen the first iteration, like SAS - also supply date for initial pop
