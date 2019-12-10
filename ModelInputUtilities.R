@@ -73,14 +73,20 @@ GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710g
 # This function returns a dataset with a row for each year of simulation,     #
 # with total pop, death rate, birth rate, and infant mortality rate           # 
 # ASSUMES FILENAMES CONTAIN: "tot_pop_both", "cdr_both", "cbr_both","imr_both"#
-# Chloe 7/12/19: now assume death rates and numbers of deaths from files
-# called "p_dying_both" and "births" respectively.
+# Chloe 7/12/19: now assume death rates and numbers of deaths from files      #
+# called "p_dying_both" and "births" respectively.                            #
+# Mike 12/10/19: Re-write so that death probabilities are estimated from      #
+# annual age-specific UN interpolated population sizes, rather than probs     #
+# from Montagu. For the 2019 model year, keep the current approach of using   #
+# average death probs in 5-year age buckets, to keep things consistent with   #
+# the MenA_OneSim.R program. Future work may move this to single-year buckets.#
 #_____________________________________________________________________________#
 
-# Chloe 7/12/19: kept crude birth rate data in here, but did use another file with number of births calculated.
-
 GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1) {
+  
   setwd(path)
+  
+  #### (1) Get total population size
   totpop<-GetFilename(path, "tot_pop_both")
   if (is.character(totpop)==FALSE) { stop(mymsg) }
   dfpop<-read.csv(totpop)
@@ -90,6 +96,7 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   if (is.data.frame(ctrypopfull)==FALSE) { stop(paste(datemsg, " tot_pop_both")) }
   ctrypopfull%>%group_by(country_code)%>%summarize(min(year), max(year))
   
+  #### (2) Get birthrate and number of births each year
   cbr<-GetFilename(path, "cbr_both")
   births <- GetFilename(path, "births")
   if (is.character(cbr)==FALSE) { stop(mymsg) }
@@ -113,181 +120,55 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   build1 <- merge(x=build0, y=numbirthfull, by=c("country_code", "year"), all=TRUE)
   colnames(build1)[colnames(build1)=="value"] <- "births"
   
-  # build1$births<-build1$totalpop*build1$birthrate
-  # Chloe 7/12: replaced this crude calculation with WPP estimates, since they use more precise birth rates and further smoothing.
-  
-  # keep empty age_from and age_to from imr file to preserve format
-  # currently infant mortality rates only here.
-  imr<-GetFilename(path, "imr_both")
-  if (is.character(imr)==FALSE) { stop(mymsg) }
-  dfim<-read.csv(imr)
-  if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfim, dfdesc="imr_both")==FALSE) { stop (filemsg)}
-  ctryimr<-dfim[dfim$country_code==mycountry, c("country_code", "year", "value")]
-  ctryimrfull<-checkVIMCdates(mydata=ctryimr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
-  if (is.data.frame(ctryimrfull)==FALSE) { stop(paste(datemsg, " imr_both")) }
-  ctryimrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
-
-
-  # build2<-merge(x=build1, y=ctryimrfull, by=c("country_code", "year"), all=TRUE)
-  
-  # currently other death rate here.
-  # cdr<-GetFilename(path, "cdr_both")
-  # if (is.character(cdr)==FALSE) { stop(mymsg) }
-  # dfcdr<-read.csv(cdr)
-  # if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="cdr_both")==FALSE) { stop (filemsg)}
-  # ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "year", "value")]
-  # ctrycdrfull<-checkVIMCdates(mydata=ctrycdr, startyr=year(start), endyr=year(end), threshold=fillThreshold)
-  # if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " cdr_both")) }
-  # ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
-  
-  # build3<-merge(x=build2, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
-  # colnames(build3)[colnames(build3)=="value.x"] <-"imr"
-  # colnames(build3)[colnames(build3)=="value.y"] <-"v"
-  
-  ########################################################################################
-  # Code written by Chloe using probs of dying from abridged death tables, matching by 
-  # current year rather than cohort; testing using matching by cohort below;
-  # if it does not work, remove commenting out of this section.
-  # Chloe 8/23: learned matching of year to current death rate from abridged life tables is correct;
-  # removed commenting from this section, but left commenting in next section to switch between
-  # them quickly.
-  
-  # Chloe 5/22: now, getting all death rates across multiple age groups from single source.
-  dr <- GetFilename(path, "p_dying_both")
-  if (is.character(dr)==FALSE) { stop(mymsg) }
-  dfcdr<-read.csv(dr)
-  if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="p_dying_both")==FALSE) { stop (filemsg)}
-  ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "age_to","year","value")]
-  # 
-  # # Chloe 5/22: now, need to switch this to wide format for each year.
-  ctrycdr.wide <- dcast(ctrycdr,country_code+year~age_to,value.var="value")
-  curr.names <- as.numeric(colnames(ctrycdr.wide)[3:ncol(ctrycdr.wide)])
-  for (i in 4:ncol(ctrycdr.wide)){
-    colnames(ctrycdr.wide)[i] <- paste0("dr",curr.names[i-3]+1,curr.names[i-2])
+  #### (3) Calculate yearly probability of death by age group
+  dr <- GetFilename(path, "int_pop_both")
+  if (is.character(dr)==FALSE){ stop(mymsg) }
+  int.pop.all <- read.csv(dr)
+  if (CheckDemogFileStructure(mycountry=mycountry, mydf=int.pop.all, dfdesc="int_pop_both")==FALSE) { 
+    stop (filemsg)
   }
-  colnames(ctrycdr.wide)[3] <- "imr"
-
-  # # Chloe 5/22: Since these death rates are only available every 5 years, I am assuming they are consistent across each 5-year span.
-  # # However, there is more detailed IMR data available: will retrieve and add later.
-  ctrycdr.new <- ctrycdr.wide %>% slice(rep(1:n(), each = 5))
-  for (i in 1:nrow(ctrycdr.wide)){
-    new.years <- c(ctrycdr.wide$year[i]:(ctrycdr.wide$year[i]+4))
-    first <- which(colnames(ctrycdr.new)=="year")
-    ind1 <- ((i-1)*5)+1
-    ind2 <- (((i-1)*5)+5)
-    ctrycdr.new[ind1:ind2,first] <- new.years
+  int.pop <- int.pop.all[int.pop.all$country_code==mycountry & int.pop.all$year>=1950, 
+                         c("country_code", "year", "age_from", "age_to", "value")]
+  
+  # Error checking: should have 15251 rows (101 age groups x 151 years)
+  if(dim(int.pop)[1] != 15251){
+    stop("Incorrect number of entries in int_pop_both")
   }
-  # # Replacing infant morality rates from more general file with ones from more-detailed file.
-  # # Applicable for the first year of age.
-  # # Note the final column only goes through age 84, so I'll assume the same death rate >84 yrs for now.
-  ctryimrfull.part <- ctryimrfull[,-which(colnames(ctryimrfull)=="country_code")]
-  ctrycdr.det <- merge(ctrycdr.new,ctryimrfull.part,by.x="year")
-  ctrycdr.det$imr <- ctrycdr.det$value
-  ctrycdr.det <- ctrycdr.det[,-which(colnames(ctrycdr.det)=="value")]
+  int.pop <- int.pop[order(int.pop$year, int.pop$age_from),]
 
-  ctrycdrfull<-checkVIMCdates(mydata=ctrycdr.det, startyr=year(start), endyr=year(end), threshold=fillThreshold)
-  if (is.data.frame(ctrycdrfull)==FALSE) { stop(paste(datemsg, " p_dying_both")) }
-  ctrycdrfull%>%group_by(country_code)%>%summarize(min(year), max(year))
-  # 
-  # # Chloe 5/22: Making final data frame.
-  build3<-merge(x=build1, y=ctrycdrfull, by=c("country_code", "year"), all=TRUE)
-  ################################################################################
+  # For each age group, calculate deaths each year
+  # First, ignore the age 100-120 (will set death rate to 1.0) 
+  # and ignore year 2100 (since we don't have 2101 data for comparison)
+  int.pop$next_value <- ifelse(int.pop$year==2100, NA,
+                               ifelse(int.pop$age_to==120, NA, int.pop$value[103:15251]))
+  int.pop$death.prob <- (int.pop$value - int.pop$next_value)/int.pop$value
   
-  # Added 7/18: assuming years in probs of dying file refer to year of birth,
-  # not current year.
-  # Adding to build2 and ctryimrfull
-  # Chloe 8/23/2019: commented this section out; found out assumptions about death rates 
-  # above were appropriate.
-  # 
-  # dr <- GetFilename(path, "p_dying_both")
-  # if (is.character(dr)==FALSE) { stop(mymsg) }
-  # dfcdr<-read.csv(dr)
-  # if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfcdr, dfdesc="p_dying_both")==FALSE) { stop (filemsg)}
-  # ctrycdr<-dfcdr[dfcdr$country_code==mycountry, c("country_code", "age_to","year","value")]
-  # ctrycdr$age_to <- paste0("d",as.character(ctrycdr$age_to))
-  # # Chloe 7/18: this check may not be appropriate any more if the revision to the death rates
-  # # below is used.
-  # 
-  # # Chloe 5/22: now, need to switch this to wide format for each year.
-  # ctrycdr.wide <- dcast(ctrycdr,country_code+year~age_to,value.var="value")
-  # # curr.names <- as.numeric(colnames(ctrycdr.wide)[3:ncol(ctrycdr.wide)])
-  # # for (i in 4:ncol(ctrycdr.wide)){
-  # #   colnames(ctrycdr.wide)[i] <- paste0("dr",curr.names[i-3]+1,curr.names[i-2])
-  # # }
-  # # colnames(ctrycdr.wide)[3] <- "imr"
-  # # Now, I am supporting "year" here refers to birth year, not current year.
-  # # So, if someone born in 1950 makes it to be 10 years old, their death rate will be as written here.
-  # 
-  # # Chloe 5/22: Since these death rates are only available every 5 years, I am assuming they are consistent across each 5-year span.
-  # # However, there is more detailed IMR data available: will retrieve and add later.
-  # ctrycdr.new <- ctrycdr.wide %>% slice(rep(1:n(), each = 5))
-  # for (i in 1:nrow(ctrycdr.wide)){
-  #   new.years <- c(ctrycdr.wide$year[i]:(ctrycdr.wide$year[i]+4))
-  #   first <- which(colnames(ctrycdr.new)=="year")
-  #   ind1 <- ((i-1)*5)+1
-  #   ind2 <- (((i-1)*5)+5)
-  #   ctrycdr.new[ind1:ind2,first] <- new.years
-  # }
-  # 
-  # # Returning to long format, more clearly labeling "year" too.
-  # colnames(ctrycdr.new)[2] <- "birth.year"
-  # ctrycdr.new <- ctrycdr.new[,-3]
-  # ctrycdr.long <- melt(ctrycdr.new,id.vars=c("country_code","birth.year"))
-  # age_to <- rep(NA,nrow(ctrycdr.long))
-  # age_from <- rep(NA,nrow(ctrycdr.long))
-  # for (i in 1:nrow(ctrycdr.long)){
-  #   age_to[i] <- as.numeric(substr(ctrycdr.long$variable[i],2,10))
-  #   age_to[i] <- ifelse(age_to[i]==84,120,age_to[i])
-  #   age_from[i] <- ifelse(age_to[i]==4,1,
-  #                         ifelse(age_to[i]==120,80,age_to[i]-4))
-  # }
-  # ctrycdr.long <- cbind(ctrycdr.long,age_from,age_to)
-  # ctrycdr.long <- ctrycdr.long[with(ctrycdr.long, order(age_from, birth.year)),]
-  # ctrycdr.long$year.from <- ctrycdr.long$birth.year+ctrycdr.long$age_from
-  # ctrycdr.long$year.to <- ctrycdr.long$birth.year+ctrycdr.long$age_to
-  # 
-  # # Now, need to put this back in wide format based on "year.from"
-  # sub.long <- ctrycdr.long[,c(1,3,4,7)]
-  # current.year.dr <- dcast(sub.long,country_code+year.from~variable)
-  # # Unfortunately, I need to relabel columns by hand for now, but might be a 
-  # # clever way of doing this automatically later.
-  # colnames(current.year.dr) <- c("country_code","year","dr1014","dr1519","dr2024","dr2529",
-  #                                "dr3034","dr3539","dr14","dr4044","dr4549","dr5054",
-  #                                "dr5559","dr6064","dr6569","dr7074","dr7579","dr8084","dr59")
-  # current.year.dr <- current.year.dr[,c(1,2,9,19,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18)]
-  # current.year.dr <- current.year.dr[current.year.dr$year<=year(end),]
-  # # Note that death rates for some groups won't be available for early years since life tables
-  # # only go back to 1950, e.g. won't have death rate for 70-year-olds in 1951.
-  # # This might be a problem later.
-  # 
-  # # Will need to fill in with death rates if missing.
-  # # For now, I will borrow from the future.
-  # 
-  # for (j in 4:ncol(current.year.dr)){
-  #   for (i in 1:(nrow(current.year.dr)-1)){
-  #     row <- nrow(current.year.dr)-i
-  #     current.year.dr[row,j] <- ifelse(is.na(current.year.dr[row,j])==TRUE,
-  #                                      current.year.dr[row+1,j],current.year.dr[row,j])
-  #   }
-  # }
-  # # For early years, I think you get the same death rates using old and new method!
-  # 
-  # # CAK 080219: because of the way the ages vs. birth cohorts work, missing a row for
-  # # the first year of the simulation; need to create a row for this year.
-  # old.current.year.dr <- current.year.dr
-  # add <- current.year.dr[1,]
-  # add$year <- 1950
-  # current.year.dr <- rbind(add,old.current.year.dr)
-  # 
-  # # Merging death rates (IMR and from probs of death) with other parameters.
-  # build2 <- merge(x=build1,y=ctryimrfull,by=c("country_code","year"),all=TRUE)
-  # colnames(build2)[6] <- "imr"
-  # build3 <- merge(x=build2,y=current.year.dr,by=c("country_code","year"),all=TRUE)
+  # Set death.prob to 1.0 for age 100-120
+  int.pop$death.prob <- ifelse(int.pop$age_to==120, 1, int.pop$death.prob)
+  
+  # For 2100, use death probabilities from 2099
+  int.pop$death.prob[int.pop$year==2100] <- int.pop$death.prob[int.pop$year==2099]
+  
+  # Fix death.prob where value is zero (set death prob to zero)
+  int.pop$death.prob[int.pop$value==0] <- 0
+  
+  # In a handful of cases (at the upper age ranges) population size increases from
+  # year to year. Rather than assume a negative death prob (which might break the
+  # simulation in an unpredictable way) set death prob to zero for these.
+  int.pop$death.prob[int.pop$death.prob < 0] <- 0
+  
+  # For every 5-year age bucket (except infant mortality) assume midpoint is death prob
+  int.pop.small <- int.pop[int.pop$age_from %in% c(0, 2, seq(7, 82, by=5)),]
+  int.pop.small$name <- ifelse(int.pop.small$age_from==0, "imr",
+                               paste("dr", int.pop.small$age_from-2, int.pop.small$age_from+2, sep=""))
+  int.pop.small$name <- ifelse(int.pop.small$name=="dr04", "dr14", int.pop.small$name)
 
-  return(build3)
+  build2a <- spread(int.pop.small[,c("year", "death.prob", "name")], name, death.prob)
+  build2a <- build2a[, c(1, 19, 3, 13, 2, 4:12, 14:18)]
   
+  build2 <- merge(x=build1, y=build2a, by="year", all=TRUE)
   
-  
+  return(build2)
 }
 
 checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {

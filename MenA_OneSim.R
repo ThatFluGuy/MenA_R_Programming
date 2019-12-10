@@ -33,6 +33,9 @@
 # Eric, 10/23: Lots of changes.  Moved dxrisk, waifw, population setup to inside function.  Split vaccinated status into Vs, Vc.  
 #              Many calls to fp, the fixed parameters generated via model calibration.  Changed syntax from fp["rc"] to fp$rc to
 #              ensure that the result is a vector.  I do not think any hard-coded parameters remain in this code or helper functions.
+
+# Mike, 12/10: Dropped /1000 for deathvec, since these are proportions not rates/1000
+
 MenASimulation<-function(startdt, enddt, fp, initpop, vacc_program, countryparams, region, country, inputdir) { 
   #setup before loop
   #disease model for rainy and dry
@@ -51,12 +54,12 @@ MenASimulation<-function(startdt, enddt, fp, initpop, vacc_program, countryparam
   #setup before loop
   theDate <- start
   births <- countryparams[countryparams$year==year(theDate), "births"]/52.1775
-  imr <- countryparams[countryparams$year==year(theDate), "imr"]/(1000*52.1775)
+  imr <- countryparams[countryparams$year==year(theDate), "imr"]/(52.1775)
   ind1 <- which(colnames(countryparams)=="dr59")
   ind2 <- which(colnames(countryparams)=="dr7579")
-  ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(1000*52.1775)
-  ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(1000*52.1775)
-  over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(1000*52.1775)
+  ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(52.1775)
+  ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(52.1775)
+  over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(52.1775)
   deathvec <- c(rep(imr,12),rep(ages1through4,(12*4)),unlist(rep(ages5through79,each=(12*5))),rep(over80,(40*12)+1))
   # v <- countryparams[countryparams$year==year(theDate), "v"] / (1000*52.1775)
   # deathvec<-c(rep(imr,12), rep(v, 349))
@@ -117,9 +120,9 @@ MenASimulation<-function(startdt, enddt, fp, initpop, vacc_program, countryparam
       # Chloe 5/22: same as above for each year of sim.
       ind1 <- which(colnames(countryparams)=="dr59")
       ind2 <- which(colnames(countryparams)=="dr7579")
-      ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(1000*52.1775)
-      ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(1000*52.1775)
-      over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(1000*52.1775)
+      ages5through79 <- countryparams[countryparams$year==year(theDate), ind1:ind2]/(52.1775)
+      ages1through4 <- countryparams[countryparams$year==year(theDate), "dr14"]/(52.1775)
+      over80 <- countryparams[countryparams$year==year(theDate), "dr8084"]/(52.1775)
       deathvec <- c(rep(imr,12),rep(ages1through4,(12*4)),unlist(rep(ages5through79,each=(12*5))),rep(over80,(40*12)+1))
     }
     
