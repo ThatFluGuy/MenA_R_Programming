@@ -272,18 +272,20 @@ GetPopAgeDist<-function(path, mycountry, start) {
 #   NOTE: ASSUMES FILENAMES CONTAIN: "mena-routine" and "mena-campaign"       #
 #    NOTE: NOT CURRENTLY LIMITED TO YEARS OF SIM, could use GetVIMCdates?     #
 #     12/6/18 copying destring from taRifx to deal with "<NA>" in vacc files  #
+#     11Dec2019: Added sub-scenario option to select between more options     #
 #_____________________________________________________________________________#
 destring <- function(x,keep="0-9.-") {
   return( as.numeric(gsub(paste("[^",keep,"]+",sep=""),"",x)) )
 }
-GetVaccScenario<-function(mycountry, scenario, directory) {
+GetVaccScenario<-function(mycountry, scenario, sub.scenario, directory) { #sub.scenario allows for selection between bestcase and default vaccination scenario files
   vaccmsg<<-""
   setwd(directory)
+  if (scenario=="none") sub.scenario <- "NA"  #can't have a sub-scenario when there's no vaccinations
   if (scenario=="routine" | scenario=="both") {
-    filename<-GetFilename(directory, "mena-routine")
+    filename<-GetFilename(directory, "mena-routine", sub.scenario)
   }
   if (scenario=="campaign") {
-    filename<-GetFilename(directory, "mena-campaign")
+    filename<-GetFilename(directory, "mena-campaign", sub.scenario)
   }
   if (is.character(filename)==FALSE) { stop(mymsg) }
   dfvacc<-read.csv(filename, stringsAsFactors = FALSE)

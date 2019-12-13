@@ -1,3 +1,7 @@
+
+
+
+
 #### Program information ######################################################
 # Source file name: Testing_Sim_Output.R                                      #
 # Package: MenA_VaccSims                                                      #
@@ -15,9 +19,15 @@
 
 library(ggplot2)
 
-inputdir<-"C:/Users/jackml4/Documents/Link_to_H_Drive/GAVI MenA predictions/Data/GAVI inputs/201810synthetic_downloaded_2019"
-outputdir <- "C:/Users/jackml4/Documents/Link_to_H_Drive/GAVI MenA predictions/Scratch/Temporary output directory"
-script.dir <- "C:/Users/jackml4/Documents/Link_to_H_Drive/GAVI MenA predictions/R_programming"
+#inputdir<-"C:/Users/jackml4/Documents/Link_to_H_Drive/GAVI MenA predictions/Data/GAVI inputs/201810synthetic_downloaded_2019"
+#outputdir <- "C:/Users/jackml4/Documents/Link_to_H_Drive/GAVI MenA predictions/Scratch/Temporary output directory"
+#script.dir <- "C:/Users/jackml4/Documents/Link_to_H_Drive/GAVI MenA predictions/R_programming"
+
+inputdir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/201810synthetic_downloaded_2019"
+outputdir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Scratch/Temporary output directory"
+script.dir <- "H:/Git/MenA R"
+
+
 
 start <- as.Date("1950-01-01")
 
@@ -127,13 +137,16 @@ incid.l <- list()
 casepop.l <- list()
 prev.l <- list()
 
-for (i in 1:50){
+
+
+
+
+for (i in 1:117){
   print(i)
-  paramfixed <- paramfixed.all[i,]
+  paramfixed.row <- paramfixed.all[i,]
   
-  finalpop<-MenASimulation(startdt=start, enddt=end, fp=paramfixed, initpop=initpop, 
-                           vacc_program=vacc_program, countryparams=myparams, 
-                           region=myregion, country=mycountry, inputdir=inputdir)
+  finalpop<-MenASimulation(startdt=start, enddt=end, fp=paramfixed.row, initpop=initpop, vacc_program=vacc_program,
+                           countryparams=myparams, region=myregion, country=mycountry, inputdir=inputdir)
 
   incid.l[[i]] <- yearlyIR()[51:151]
   casepop.l[[i]] <- yearlyCases()[, , 51:151]
@@ -143,7 +156,7 @@ for (i in 1:50){
   lines(1:101, incid.l[[i]])
   
   colors.v <- c("red", "orange", "yellow", "green", "blue", "violet", "purple")
-  if (i==50){
+  if (i==117){
     plot(1:101, prev.l[[i]][1,1,], pch=16, col="grey", ylim=c(0, max(prev.l[[i]])), 
          xlab="Year", ylab="Prev", main="Dry season prevalence")
     lines(1:101, prev.l[[i]][1,1,], col="grey")
@@ -161,7 +174,7 @@ for (i in 1:50){
 sim.df <- data.frame(iter=numeric(0), agegrp=numeric(0), year=numeric(0),
                      incid=numeric(0), epi.type=character(0))
 
-for (i in 1:50){
+for (i in 1:117){
   casepop.i <- casepop.l[[i]]
   
   epi.type <- ifelse(incid.l[[i]] < 20, "a.minor",
@@ -236,7 +249,7 @@ rm(sim.df, agg.df, casepop.a, epi.type, case.agegrp, case.lt30)
 sim.df <- data.frame(iter=numeric(0), agegrp=numeric(0), year=numeric(0),
                      value=numeric(0), epi.type=character(0))
 
-for (i in 1:50){
+for (i in 1:117){
   prev.i <- prev.l[[i]]
   
   epi.type <- ifelse(prev.i[1, "A_All", ] <= 0.025, "b.minor", "c.major")
