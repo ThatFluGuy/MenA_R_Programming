@@ -346,9 +346,6 @@ GetWAIFWmatrix<-function(params) {
 }
 
 
-
-
-
 #_____________________________________________________________________________#
 # GetModelParams: Reads model_params.csv, which is supplied with scripts;     # 
 # Two rows; one for region="hyper", one region="nonhyper"                     #
@@ -369,6 +366,67 @@ GetModelParams<-function(path, region.val) {
 }
 
 
+#_____________________________________________________________________________#
+# GetLifeExp: reads the life_ex_both file and creates a data.frame of life    #
+# expectancy by age and year.                                                 #
+#_____________________________________________________________________________#
 
+GetLifeExp<-function(path, mycountry.s=mycountry) {
+  
+  # Inputs:
+  # path        - character scalar with directory where life expectancy data exist
+  # mycountry.s - character scalar with code for current country
+  
+  # Output:
+  # data.frame with life expectancy by age and year
+  
+  setwd(path)
+  
+  lifex <- GetFilename(path, "life_ex_both")
+  if (is.character(lifex)==FALSE) {stop(mymsg)}
+  
+  lifex.df <- read.csv(lifex)
+  if (CheckDemogFileStructure(mycountry=mycountry.s, mydf=lifex.df, dfdesc="life_ex_both")==FALSE) { stop (filemsg)}
+
+  lifex.df <- lifex.df[lifex.df$country_code==mycountry.s, 
+                       c("age_from", "age_to", "year", "value")]
+  
+  # Expand to individual ages instead of age groups
+  # First expand for the "missing" ages (e.g. 2-4 from the 1-4 group)
+  # Then add the "present" ages (values of age_from)
+  lifex.df$count <- lifex.df$age_to - lifex.df$age_from
+  
+  le.df <- data.frame(year=rep(lifex.df$year, times=lifex.df$count),
+                      value=rep(lifex.df$value, times=lifex.df$count),
+                      age_strt=rep(lifex.df$age_from, times=lifex.df$count),
+                      counter=sequence(lifex.df$count))
+  le.df$age_from <- le.df$age_strt + le.df$counter
+  le.df <- rbind(lifex.df[, c("year", "value", "age_from")],
+                 le.df[, c("year", "value", "age_from")])
+  le.df <- le.df[order(le.df$year, le.df$age_from),]
+  
+  # Expand to every year instead of every 5 years
+  results <- data.frame(year=rep(le.df$year, times=5),
+                        value=rep(le.df$value, times=5),
+                        age_from=rep(le.df$age_from, times=5),
+                        counter=c(rep(0, times=length(le.df$year)),
+                                  rep(1, times=length(le.df$year)),
+                                  rep(2, times=length(le.df$year)),
+                                  rep(3, times=length(le.df$year)),
+                                  rep(4, times=length(le.df$year))))
+  results$year <- results$year + results$counter
+  
+  results <- results[order(results$year, results$age_from), 
+                     c("year", "age_from", "value")]
+  names(results) <- c("year", "AgeInYears", "Life.Ex")
+  
+  # Duplicate 2099 to create 2100
+  res2 <- results[results$year==2099,]
+  res2$year <- 2100
+  results <- rbind(results, res2)
+  
+  return(results)
+    
+}
 
 
