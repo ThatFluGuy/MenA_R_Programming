@@ -47,7 +47,8 @@ outputdir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Scratch/Tempora
 
 #directory containing R scripts
 #script.dir <- "C:/Users/krakcx1/Desktop/Cloned_meningitis_code"
-script.dir <- "H:/Git/MenA R"
+#script.dir <- "H:/Git/MenA R"
+script.dir <- "C:/Users/jackml4/Documents/Link_To_H_Drive/GAVI MenA predictions/R_programming"
 ###end parameters to set 
 
 #script directory contains functions
@@ -80,14 +81,15 @@ if (CheckSetParameters(setparams)==FALSE) {
   if (length(spmessage)>1) { print(spmessage) }
 }
 
-#country-specific parameters
-
+# Import country-specific parameters
 myparams<-GetDemographicParameters(path=inputdir,  mycountry=mycountry, start=start, end=end)
 if (CheckDemogParameters(myparams)==FALSE) {
   stop(dpmessage)
 } else {
   if (length(dpmessage)>1) { print(dpmessage) }
 }
+
+# Import vaccination program details
 if (vacc_program!="none") {
   myvacc<-GetVaccScenario(mycountry=mycountry, scenario=vacc_program, sub.scenario=vacc_subprogram, directory=inputdir)
   if (is.data.frame(myvacc)==FALSE) { stop(vaccmsg)}  #check for output
@@ -97,11 +99,12 @@ if (vacc_program!="none") {
   }
 }
 
-
+# Country-specific life expectancy
+my.lifex <- GetLifeExp(path=inputdir, mycountry.s=mycountry)
 
 #Read in parameters calculated in ABC, or a row of parameters to be used by ABC.  Points to model_params.csv
 #This file should supply all calibrated parameters, removing all hard-coding throughout the model.
-paramfixed <- GetModelParams(path=inputdir, region.val=myregion)
+paramfixed <- GetModelParams(path=script.dir, region.val=myregion)
 
 #initialize population
 startSize <- myparams[myparams$year==year(start)-1, "totalpop"]
@@ -120,7 +123,7 @@ seed.vec <- unique(floor(runif(nSims*2, 0, 1000000)))[1:nSims]
 
 
 #begin simulations
-cl <- makeCluster(8)  #scale this upwards if you're on a workstation with >16gb memory
+cl <- makeCluster(4)  #scale this upwards if you're on a workstation with >16gb memory
 registerDoParallel(cl)
 my_data <- foreach(n=1:nSims, .verbose=TRUE, .packages = c("lubridate", "dplyr", "data.table", "reshape2")) %dopar% {
   set.seed(seed.vec[n])
@@ -140,8 +143,9 @@ stopCluster(cl)
 #for checking by plotting
 onerun <- MenASimulation(startdt=start, enddt=end, fp=paramfixed[4,], initpop=initpop, vacc_program=vacc_program,
                          countryparams=myparams, region=myregion, country=mycountry, inputdir=inputdir)
-cohortSize<-getCohortSize(onerun)
-totalPop<-cohortSize%>%group_by(IterYear)%>%summarize(tot=sum(cohortsize))
+cohortSize <- getCohortSize(onerun)
+totalPop <- cohortSize %>% 
+  group_by(year) %>% summarize(tot=sum(cohortsize))
 
 
 

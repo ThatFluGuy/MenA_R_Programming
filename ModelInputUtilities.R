@@ -349,19 +349,25 @@ GetWAIFWmatrix<-function(params) {
 
 
 #_____________________________________________________________________________#
-# GetModelParams: Reads model_params.csv, which is supplied with scripts;     # 
-# Two rows; one for region="hyper", one region="nonhyper"                     #
-# Returns a one-row dataframe from the appropriate region                     #
+# GetModelParams: Reads posterior_parameters.csv, which is supplied with      #
+# scripts. Subset to hyper or non-hyper region.                               #
 # Goal is to prevent hard-coding of parameters in model                       #
 #_____________________________________________________________________________#
 
-GetModelParams<-function(path, region.val) {
+GetModelParams<-function(path=scripts.dir, region.val) {
+
+  if (!(region.val %in% c("hyper", "not_hyper"))){
+    mymsg <- "region must be hyper or not_hyper"
+    stop(mymsg)
+  }
+  
   setwd(path)
   param.file <-GetFilename(path, "posterior_parameters.csv")
   if (is.character(param.file)==FALSE) { 
     stop(mymsg) 
     print("File [posterior_parameters.csv] is packaged with the R scripts and should be in the same directory.")
   }
+  
   params <- read.csv(param.file, stringsAsFactors = FALSE)  #data frame
   params.region <- subset(params, region==region.val)
   return(params.region)
