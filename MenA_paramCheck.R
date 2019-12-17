@@ -65,7 +65,7 @@ IsCountryAndColAvailable<-function(country_code, mydf, forVacc=0) {
   return(TRUE)
 }
 
-GetFilename<-function(path, pattern) {
+GetFilename<-function(path, pattern, subpattern="NA") {
   mymsg<<-""
   setwd(path)
   flist<-list.files(path)
@@ -73,6 +73,9 @@ GetFilename<-function(path, pattern) {
   if (length(myfile)==0) { 
     mymsg<<-paste("No file found for ", pattern)
     return(FALSE)
+  }
+  if (subpattern != "NA") {  #code to allow selection between bestcase and default vaccination scenarios
+    myfile<-myfile[grepl(subpattern,myfile)==TRUE]
   }
   e<-try(read.csv(myfile[1]))
   if (class(e) == "try-error" || is.na(e)) { 
@@ -268,11 +271,11 @@ CheckSetParameters<-function(setparams) {
       return(FALSE)
     }
   }
-  if (dir.exists(inputdir)==FALSE) {
+  if (dir.exists(input.dir)==FALSE) {
     spmessage<<-"inputdir is not a valid directory"
     return(FALSE)
   }
-  if (dir.exists(outputdir)==FALSE) {
+  if (dir.exists(output.dir)==FALSE) {
     spmessage<<-"outputdir is not a valid directory"
     return(FALSE)
   }

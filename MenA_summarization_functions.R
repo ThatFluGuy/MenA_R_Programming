@@ -2,97 +2,107 @@
 # Package: MenA_VaccSims                                                      #
 # Source file name: MenA_summarization_functions.R                            #
 # Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
-# Version Date 12/31/2018                                                     #
+# Version Date 12/17/2019                                                     #
 #_____________________________________________________________________________#
-# Functions called by MenA_VaccSim                                            #
-# Contents:                                                                   #
-# -getCohortSize: calulate total poplation in each year and year of age        #
-# -summarizeOneSim: Collapse results of one simulation into a data frame       #
+# Program description: Contains functions used to summarize simulation output #
+# -getCohortSize: calulate total poplation in each year and year of age       #
+# -summarizeOneSim: Collapse results of one simulation into a data frame      #
 #   with Cases, Deaths, Dalys by year and year of age.                        #
-#	-SummarizeForOutput : takes a list of products of summarizeOneSim and        #  
+#	-SummarizeForOutput : takes a list of products of summarizeOneSim and       #  
 #   calculates mean over all simulations; writes output file                  #
 #_____________________________________________________________________________#
 
+### (1) Function to calculate cohort size #####################################
+getCohortSize<-function(poparray) { 
+  
+  # Inputs: poparray - array with population by age, model compartment, and week
+  # Outputs: data.frame with cohort sizes
+  
+  # Use the midpoint of the year (last week of June) to get population
+  # To speed up processing, first restrict the full cohort array to this week
+  dates <- as.Date(as.numeric(dimnames(poparray)[[3]]), origin="1970-01-01")
+  pop.a <- poparray[, , month(dates)==6 & day(dates)>=24 & year(dates)>=2000]
+  
+  # Sum the population across model states and convert to tall
+  cohort <- apply(pop.a[ , 1:9, ], c(1,3), sum) # only a little slow / EJ edit: Va -> Vs, Vc.  Column 10 is Inc(idence), not used here.
+  cohortlong <- melt(cohort)
+  cohortlong$RealDate <- as.Date(cohortlong[,2], origin="1970-01-01")
+  cohortlong$year <- year(cohortlong$RealDate)
+  cohortlong$AgeInYears <- floor((cohortlong[,1]-1)/12)
+  
+  # Group all age 70+ together
+  cohortlong$AgeInYears <- ifelse(cohortlong$AgeInYears > 70, 70, cohortlong$AgeInYears)
 
-getCohortSize<-function(poparray) {
-  #cohort size - sum 2nd dimension except Inc / only need to do once - first simulation
-  #modify 3/14/18 - need to split 30+ pot into ages 30-70
-  # Chloe 5/30: no need to split 30+ pot since it's now split.
-    cohort<-apply(poparray[,1:8,], c(1,3), sum) # only a little slow
-    cohortlong<-melt(cohort)
-    cohortlong$RealDate<-as.Date(cohortlong[,2], origin="1970-01-01")
-    cohortlong$IterYear<-year(cohortlong$RealDate)
-    cohortlong$AgeInYears<-floor((cohortlong[,1]-1)/12)
-    #pick last day of july per year for calculating cohort size  #WHERE MONTH(date) = 7 AND DAY(date) >= 25;
-    cohortsample<-cohortlong[month(cohortlong$RealDate)==7 & day(cohortlong$RealDate)>24,]
-    # coh_under30<-cohortsample[cohortsample$AgeInYears!=30,]
-    # Chloe 5/30: just replacing this object to make things simpler.
-    coh_under30<-cohortsample
-    # coh_over30<-cohortsample[cohortsample$AgeInYears==30,]
-    # coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=100),rep(coh_over30$value/41, 41))
-    # Changing number of times ages get repeated according to number of unique years in final data set.
-    # coh_over30exp<-cbind(rep(coh_over30$IterYear, 41),rep(30:70, each=length(unique(coh_over30$IterYear))),
-      #                   rep(coh_over30$value/41, 41))
-    # coh_over30expdf<-as.data.frame(coh_over30exp)
-    # colnames(coh_over30expdf)<-c("IterYear", "AgeInYears", "cohortsize")
-    sum_under30<-coh_under30%>%group_by(IterYear, AgeInYears)%>%summarize(cohortsize=sum(value))
-    # cohortsizes<-rbind(as.data.frame(sum_under30), coh_over30expdf)
-    # Chloe 5/30: using same renaming trick here.
-    cohortsizes<- as.data.frame(sum_under30)
-    return(cohortsizes)
+  # Sum by year of age
+  cohortsizes <- cohortlong %>%
+    group_by(year, AgeInYears) %>%
+    summarize(cohortsize=sum(value))
+  
+  return(cohortsizes)
 }
 
 
-summarizeOneSim<-function(poparray, n, cfr) {
+### (2) Count cases, deaths, and DALYs ########################################
+summarizeOneSim<-function(poparray, sim.number=n, cfr.v=cfr, le.df=my.lifex) { 
+  
+  # Inputs:
+  # poparray - array with population by age, model compartment, and week
+  # sim.n    - scaler indicating simulation iteration
+  # cfr.v    - vector of age-specific case fatality ratios
+  # le.df    - data.frame with age- and year-specific life expectancy
+  
+  # Output: a data.frame with year, age, simulation, cases, deaths, and DALYs
+  
   #summarize incident cases by year and year of age, calculate deaths and DALYs
-  inclong<-(melt(poparray[,"Inc",]))
-  inclong$RealDate<-as.Date(inclong[,2], origin="1970-01-01")
-  #summarize incident cases by year
-  inclong$IterYear<-year(inclong$RealDate)
-  inclong$AgeInYears<-floor((inclong[,1]-1)/12)
-  res<-inclong%>%filter(IterYear>2000)%>%group_by(IterYear,AgeInYears)%>%summarize(Cases=sum(value))
-  #split into under or over 30
-  # Chloe: all individuals over 30 grouped together.
-  #over 30 generate a data frame with age 30-70, and cases sumingroup/41, for each yearly row
-  # Chloe 6/10: now that all individuals over 30 generated separately, no need to 
-  # split over 30 group.
-  # over30<-res[res$AgeInYears==30,]
-  over30<-res[res$AgeInYears>=30,]
-  # Chloe: Edited to work for variable number of years of simulation.
-  # over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=100),rep(over30$Cases/41, 41))
-  # over30expanded<-cbind(rep(over30$IterYear, 41),rep(30:70, each=nrow(over30)),rep(over30$Cases/41, 41))
-  over30expanded <- over30
-  over30df<-as.data.frame(over30expanded)
-  colnames(over30df)<-c("IterYear", "AgeInYears", "Cases")
-  over30df$cfr<-cfr[6]
-  #age-vector for death calc (under 30 only, over 30 is a constant)
-  cfrVec<-c(rep(cfr[1],1), rep(cfr[2], 4),rep(cfr[3], 5), rep(cfr[4], 5), rep(cfr[5], 5), rep(cfr[6], 10))
-  # Chloe: Edited to work for variable number of years of simulation.
-  # Chloe 6/10: I believe this used to calculate the number of incident cases that died;
-  # keeping the same death rates for now.
-  # under30df<-cbind(as.data.frame(res[res$AgeInYears<30,]), "cfr"=rep(cfrVec, 100))
-  under30df<-cbind(as.data.frame(res[res$AgeInYears<30,]), "cfr"=rep(cfrVec, nrow(over30)))
-  results<-rbind(under30df, over30df)
-  results$Deaths<-results$Cases*results$cfr
-  results$DALYs<-results$Deaths*(70-results$AgeInYears) + (results$Cases-results$Deaths)* (0.26*0.072)*(70-results$AgeInYears)
-  # res[k,"DALYs",] <- res[k,"death",] * (71-k) + ( res[k,"cases",]-res[k,"death",])* (0.26*0.072) * (71-k)
-  results$simulation <- n
-  return(results)
+  inclong <- melt(poparray[,"Inc",], varname=c("AgeWeek", "TimeWeek"))
+  inclong$RealDate <- as.Date(inclong[,2], origin="1970-01-01")
+  #summarize incident cases by year, group all 70+ together
+  inclong$year <- year(inclong$RealDate)
+  inclong$AgeInYears <- floor((inclong[,1]-1)/12)
+  inclong$AgeInYears <- ifelse(inclong$AgeInYears > 70, 70, inclong$AgeInYears) 
+  # Sum by age and year; much faster than aggregate()
+  res <- inclong %>% 
+    filter(year>=2000) %>% group_by(year, AgeInYears) %>% 
+    summarize(Cases=sum(value))
+
+  
+  # Vector of case fatality ratios
+  cfr.age <- c(cfr.v[1], rep(cfr.v[2], 4), rep(cfr.v[3], 5), rep(cfr.v[4], 5),
+               rep(cfr.v[5], 5), rep(cfr.v[6], 51))
+  
+  res$Deaths <- res$Cases*cfr.age
+
+  # Merge in life expectancy and calculate DALYs
+  results <- merge(res, le.df, by=c("year", "AgeInYears"))
+  results$DALYs <- results$Deaths*results$Life.Ex +
+    (results$Cases - results$Deaths) * (0.26 * 0.072) * results$Life.Ex
+  
+  #results$DALYs<-results$Deaths*(70-results$AgeInYears) + (results$Cases-results$Deaths)* (0.26*0.072)*(70-results$AgeInYears)
+  results$simulation <- sim.number
+  return(results[order(results$year, results$AgeInYears), names(results) != "Life.Ex"])
 }
+
+### (3) Average results across sims ###########################################
 
 summarizeForOutput<-function(results_list, cohort, write, filename) {
   if (length(results_list) > 1) {
     allsims <- rbindlist(results_list)
-    simmeans <-allsims%>%select(IterYear, AgeInYears, Cases, Deaths, DALYs)%>%group_by(IterYear, AgeInYears)%>%summarize_all(.funs=(mean))
-    simcount<-allsims%>%group_by(IterYear, AgeInYears)%>%summarize(simulations=max(simulation))
-    simsummary <-merge(x=simmeans, y=simcount, by = c("IterYear", "AgeInYears"))
+    simmeans <- allsims %>% 
+      select(year, AgeInYears, Cases, Deaths, DALYs) %>% 
+      group_by(year, AgeInYears) %>% 
+      summarize_all(.funs=(mean))
+    simcount <- allsims %>% 
+      group_by(year, AgeInYears) %>%
+      summarize(simulations=max(simulation))
+    simsummary <-merge(x=simmeans, y=simcount, by = c("year", "AgeInYears"))
   } else {
     allsims<-results_list
-    simsummary<-allsims[, c("IterYear", "AgeInYears", "Cases", "Deaths", "DALYs")]
+    simsummary<-allsims[, c("year", "AgeInYears", "Cases", "Deaths", "DALYs")]
     simsummary$simulations<-1
   }
   #need to join for cohort size
-  finalsummary<-merge(x = simsummary, y = cohort, by = c("IterYear", "AgeInYears")) 
+  finalsummary<-merge(x = simsummary, y = cohort, by = c("year", "AgeInYears"))
+  finalsummary <- finalsummary[order(finalsummary$year, finalsummary$AgeInYears),]
   if (write==TRUE){
     write.csv(finalsummary, filename)
     print(paste("Output written to", filename))
