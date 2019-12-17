@@ -271,11 +271,11 @@ CheckSetParameters<-function(setparams) {
       return(FALSE)
     }
   }
-  if (dir.exists(inputdir)==FALSE) {
+  if (dir.exists(input.dir)==FALSE) {
     spmessage<<-"inputdir is not a valid directory"
     return(FALSE)
   }
-  if (dir.exists(outputdir)==FALSE) {
+  if (dir.exists(output.dir)==FALSE) {
     spmessage<<-"outputdir is not a valid directory"
     return(FALSE)
   }

@@ -1,12 +1,22 @@
-
 #### Program information ######################################################
 # Package: MenA_VaccSims                                                      #
 # Source file name: ModelInputUtilities.R                                     #
 # Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
-# Version Date 12/13/18                                                       #
+# Version Date 12/17/19                                                       #
 #_______________________________________ _____________________________________#
 # Input datasets: specify folder containing downloads from                    #
 #   https://montagu.vaccineimpact.org/                                        #
+#_____________________________________________________________________________#
+# Functions in this program:                                                  #
+# (1) GetMontaguDemogData                                                     #
+# (2) GetDemographicParameters                                                #
+# (3) checkVIMCdates                                                          #
+# (4) GetPopAgeDist                                                           #
+# (5) GetVaccScenario                                                         #
+# (6) GetDiseaseStateDist                                                     #
+# (7) GetWAIFWmatrix                                                          #
+# (8) GetModelParams                                                          #
+# (9) GetLifeEx                                                               # 
 #_____________________________________________________________________________#
 # Parameters:                                                                 #
 # Start and end dates of simulation - to be specified in calling program      #
@@ -23,7 +33,8 @@
 #_____________________________________________________________________________#
 
 
-#_____________________________________________________________________________#
+### (1) Download data from Montagu API ########################################
+# Not currently used.                                                         #
 # PURPOSE: GET DATA FROM API at "montagu.vaccineimpact.org"                   #
 # This function does not work from KPWA network but tested from my laptop     #
 # 11/16/18, "downloads the 5 data files we need by reading into dataframe     # 
@@ -39,9 +50,7 @@
 # in the future; existence of that data in input folder currently assumed in functions below.
 
 GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710gavi-5", destpath=NULL) {
-  #GET DATA FROM APIdoes not work from KPWA network but tested from my laptop
-  #destpath is where you want to put the data - should be same as path in GetDemographicParameters()
-  #username and password for montagu site
+
   svr<-montagu_server(name="production", hostname="montagu.vaccineimpact.org", username=username, password=password)
   montagu_server_global_default_set(svr)
   tchlist<-montagu_touchstones_list(svr)
@@ -69,7 +78,7 @@ GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710g
   }
 }
 
-#_____________________________________________________________________________#
+### (2) GetDemographicParameters ##############################################
 # This function returns a dataset with a row for each year of simulation,     #
 # with total pop, death rate, birth rate, and infant mortality rate           # 
 # ASSUMES FILENAMES CONTAIN: "tot_pop_both", "cdr_both", "cbr_both","imr_both"#
@@ -171,6 +180,9 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
   return(build2)
 }
 
+### (3) checkVIMCdates ########################################################
+# Function to check dates.                                                    #
+
 checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
   #assume data has variables country and year
   #will fill in up to a threshold (default = 1 year) with values from nearest year
@@ -210,7 +222,7 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
   return(mydata)
 }
 
-#_____________________________________________________________________________#
+### (4) GetPopAgeDist #########################################################
 # This function returns a vector with 7 values, one for each 5-year age       #
 #  band up to 30, calculated from quinquennial file, for the year closest to  #
 #  specified start of simulation. Added names=age band 11/15/18               #
@@ -266,7 +278,7 @@ GetPopAgeDist<-function(path, mycountry, start) {
 }
 
 
-#_____________________________________________________________________________#
+### (5) GetVaccScenario #######################################################
 # This function returns a dataset with a row for each year of simulation,     #
 # with DosesCampaign, CoverRoutine, and AgeLimCampaign                        # 
 #   NOTE: ASSUMES FILENAMES CONTAIN: "mena-routine" and "mena-campaign"       #
@@ -307,7 +319,7 @@ GetVaccScenario<-function(mycountry, scenario, sub.scenario, directory) { #sub.s
 }
 
 
-#_____________________________________________________________________________#
+### (6) GetDiseaseStateDist ###################################################
 # Function GetDiseaseStateDist, called by InitializePopulation.R              #
 # Reads dist_both.csv, which is supplied with scripts; format should not vary #
 #_____________________________________________________________________________#
@@ -324,7 +336,7 @@ GetDiseaseStateDist<-function(directory, region) {
   return(statefract)
 }
 
-#______________________________________________________________________________________#                                                                  #
+### (7) GetWAIFWmatrix #################################################################
 # Get WAIFWmatrix: constructs expanded WAIFW matrix from supplied parameter data frame;# 
 #______________________________________________________________________________________#
 # Chloe edit 3/29: need to expand further to account for higher ages part of sim now.
@@ -348,7 +360,7 @@ GetWAIFWmatrix<-function(params) {
 }
 
 
-#_____________________________________________________________________________#
+### (8) GetModelParams ########################################################
 # GetModelParams: Reads posterior_parameters.csv, which is supplied with      #
 # scripts. Subset to hyper or non-hyper region.                               #
 # Goal is to prevent hard-coding of parameters in model                       #
@@ -374,7 +386,7 @@ GetModelParams<-function(path=scripts.dir, region.val) {
 }
 
 
-#_____________________________________________________________________________#
+### (9) GetLifeExp ############################################################
 # GetLifeExp: reads the life_ex_both file and creates a data.frame of life    #
 # expectancy by age and year.                                                 #
 #_____________________________________________________________________________#

@@ -2,14 +2,13 @@
 # Package: MenA_VaccSims                                                      #
 # Source file name: MenA_summarization_functions.R                            #
 # Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
-# Version Date 12/31/2018                                                     #
+# Version Date 12/17/2019                                                     #
 #_____________________________________________________________________________#
-# Functions called by MenA_VaccSim                                            #
-# Contents:                                                                   #
-# -getCohortSize: calulate total poplation in each year and year of age        #
-# -summarizeOneSim: Collapse results of one simulation into a data frame       #
+# Program description: Contains functions used to summarize simulation output #
+# -getCohortSize: calulate total poplation in each year and year of age       #
+# -summarizeOneSim: Collapse results of one simulation into a data frame      #
 #   with Cases, Deaths, Dalys by year and year of age.                        #
-#	-SummarizeForOutput : takes a list of products of summarizeOneSim and        #  
+#	-SummarizeForOutput : takes a list of products of summarizeOneSim and       #  
 #   calculates mean over all simulations; writes output file                  #
 #_____________________________________________________________________________#
 
@@ -83,6 +82,8 @@ summarizeOneSim<-function(poparray, sim.number=n, cfr.v=cfr, le.df=my.lifex) {
   return(results[order(results$year, results$AgeInYears), names(results) != "Life.Ex"])
 }
 
+### (3) Average results across sims ###########################################
+
 summarizeForOutput<-function(results_list, cohort, write, filename) {
   if (length(results_list) > 1) {
     allsims <- rbindlist(results_list)
@@ -100,7 +101,8 @@ summarizeForOutput<-function(results_list, cohort, write, filename) {
     simsummary$simulations<-1
   }
   #need to join for cohort size
-  finalsummary<-merge(x = simsummary, y = cohort, by = c("year", "AgeInYears")) 
+  finalsummary<-merge(x = simsummary, y = cohort, by = c("year", "AgeInYears"))
+  finalsummary <- finalsummary[order(finalsummary$year, finalsummary$AgeInYears),]
   if (write==TRUE){
     write.csv(finalsummary, filename)
     print(paste("Output written to", filename))
