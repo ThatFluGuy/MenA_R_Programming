@@ -51,10 +51,10 @@ use.tensims <- FALSE # If desired, output results from 10 sims for debugging
 # Directory containing inputs from https://montagu.vaccineimpact.org/
 input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/2019_12_gavi_v3"
 # Directory for simulation outputs
-output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Scratch/Temporary output directory"
+output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/Simulation results"
 
 # Directory containing R scripts
-script.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/R_programming"
+script.dir <- "C:/Users/jackml4/Documents/Link_to_H_drive/GAVI MenA predictions/R_programming"
 
 ### (3) Import and format data/functions ######################################
 # Import scripts used in the simulations, country-specific parameters, and    #
@@ -94,8 +94,8 @@ if (CheckSetParameters(setparams)==FALSE) {
 }
 
 # (C) Import country-specific parameters
-myparams<-GetDemographicParameters(path=input.dir,  mycountry=mycountry, start=start, end=end)
-if (CheckDemogParameters(myparams)==FALSE) {
+myparams.full <- GetDemographicParameters(path=input.dir,  mycountry=mycountry, start=start, end=end)
+if (CheckDemogParameters(myparams.full)==FALSE) {
   stop(dpmessage)
 } else {
   if (length(dpmessage)>1) { print(dpmessage) }
@@ -117,15 +117,25 @@ my.lifex <- GetLifeExp(path=input.dir, mycountry.s=mycountry)
 # (F) Read in parameters calculated in ABC, or a row of parameters to be used by ABC.  
 paramfixed <- GetModelParams(path=script.dir, region.val=myregion)
 
-# (G) Initialize population
-startSize <- myparams[myparams$year==year(start)-1, "totalpop"]
-initpop<-InitializePopulation(scriptdir=script.dir, inputdir=input.dir, start=start, end=end, country=mycountry, region=myregion, startSize=startSize)
+# (G) Initialize full population.
+startSize <- myparams.full[myparams.full$year==year(start)-1, "totalpop"]
+initpop.full <- InitializePopulation(scriptdir=script.dir, inputdir=input.dir, start=start, end=end, country=mycountry, region=myregion, startSize=startSize)
 #check for errors
-if (!(is.numeric(initpop))) {
+if (!(is.numeric(initpop.full))) {
   if (disterr!="") { print(disterr) } 
   if (dxerr!="") { print(dxerr) } 
   stop(initmsg)
 }
+
+# (H) Scale down the full population to the modeled population
+# This means changing both the starting population size and
+# the annual number of births.
+pct.modeled <- GetModelPct(path=input.dir, mycountry.s=mycountry)
+initpop <- initpop.full
+initpop[,,1] <- initpop[,,1] * pct.modeled
+
+myparams <- myparams.full
+myparams$births <- myparams$births * pct.modeled
 
 ### (4) Run simulations #######################################################
 # Set up random seed vector and use parallel processing to run simulations.   #
@@ -153,8 +163,10 @@ stopCluster(cl)
 
 
 # Also run one time to get the cohort size
-onerun <- MenASimulation(startdt=start, enddt=end, fp=paramfixed[4,], initpop=initpop, vacc_program=vacc_program,
-                         countryparams=myparams, region=myregion, country=mycountry, inputdir=input.dir)
+# VIMC wants the size of the full population, not just the vaccine-
+# targetted population, so run this without scaling down
+onerun <- MenASimulation(startdt=start, enddt=end, fp=paramfixed[4,], initpop=initpop.full, vacc_program=vacc_program,
+                         countryparams=myparams.full, region=myregion, country=mycountry, inputdir=input.dir)
 cohortSize <- getCohortSize(onerun)
 totalPop <- cohortSize %>% 
   group_by(year) %>% summarize(tot=sum(cohortsize))
