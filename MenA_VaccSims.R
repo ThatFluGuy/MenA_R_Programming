@@ -186,7 +186,7 @@ if (use.tensims==TRUE) {
 }
 
 # Output summary results for the country/scenario set
-filename <- paste0(mycountry, "_", vacc_program, "_", Sys.Date(), ".csv")
+filename <- paste0(mycountry, "_", vacc_program, "_", vacc_subprogram, "_", Sys.Date(), ".csv")
 filename1<- paste0(output.dir, "/", filename)
 finalsummary<-summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
 
