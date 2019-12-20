@@ -449,4 +449,20 @@ GetLifeExp<-function(path, mycountry.s=mycountry) {
     
 }
 
+### (10) Get proportion to model ##############################################
+# For many countries, the target population for vaccination is only a portion #
+# of the full country. This function imports data on the percent of the pop   #
+# to use in the model. 
 
+GetModelPct <- function(path=input.dir, mycountry.s=mycountry){
+  # Inputs
+  # path        - character scalar with directory where modeled percent data exist
+  # mycountry.s - character scalar with code for current country
+
+  # Outputs: scaler containing proportion of population to model  
+  
+  popmod.df <- read.csv(paste(path, "percent_pop_modeled.csv", sep="/"),
+                        stringsAsFactors = FALSE)
+
+  return(popmod.df$pct_pop_modeled[popmod.df$country_code==mycountry.s])  
+}
