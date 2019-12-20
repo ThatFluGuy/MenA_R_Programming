@@ -35,15 +35,18 @@ library(tidyr)
 
 ### (2) User-set parameters ###################################################
 # Edit the code in this section to specify country and scenario.              #
+# Edit the code in this section to specify country and scenario.              #
+# Update 2019.12.20 - include option to pseudo-automate. If set to true, the  #
+# program will find the first country/scenario combination that has not yet   #
+# been completed and will run it, from the scenario_tracker.csv file. If set  #
+# to false, manually enter the country, program option, and region type.      #
+
+automate <- TRUE
 
 begin <- Sys.time()
-mycountry <- "NGA"
 start <- as.Date("1951-01-01") # Use 1/1/1951 to give 50 years burn-in
 end <- as.Date("2100-12-31")
-myregion <- "hyper"  #"hyper" or "not_hyper"
 PSA <- FALSE
-vacc_program <- "campaign" ## "campaign" or "routine" or "both" or "none"
-vacc_subprogram <- "default"  ## "default" or "bestcase" are allowable options in 2019v3
 sd <- 4567 # Seed for random sto, use same for all scenarios
 nSims <- 117  # Update: 100 takes around 12 minutes if using 4 cores.
 use.tensims <- FALSE # If desired, output results from 10 sims for debugging
@@ -52,9 +55,28 @@ use.tensims <- FALSE # If desired, output results from 10 sims for debugging
 input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/2019_12_gavi_v3"
 # Directory for simulation outputs
 output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/Simulation results"
-
 # Directory containing R scripts
-script.dir <- "C:/Users/jackml4/Documents/Link_to_H_drive/GAVI MenA predictions/R_programming"
+script.dir <- "C:/Users/jackml4/documents/Link_to_H_drive/GAVI MenA predictions/R_programming"
+
+if (automate==TRUE){
+  scenario_tracker <- read.csv(paste(input.dir, "scenario_tracker.csv", sep="/"),
+                               stringsAsFactors = FALSE)
+  not_done <- which(scenario_tracker$completed=="FALSE")
+  if(length(not_done) >= 1){
+    scen_num <- not_done[1]
+    mycountry <- scenario_tracker$country_code[scen_num]
+    myregion <- scenario_tracker$region[scen_num]
+    vacc_program <- scenario_tracker$vacc_program[scen_num]
+    vacc_subprogram <- scenario_tracker$vacc_subprogram[scen_num]
+  } else {
+    print("All scenarios have been completed")
+  }
+} else {
+  mycountry <- "NGA"
+  myregion <- "hyper"  #"hyper" or "not_hyper"
+  vacc_program <- "campaign" ## "campaign" or "routine" or "both" or "none"
+  vacc_subprogram <- "default"  ## "default" or "bestcase" are allowable options in 2019v3
+}
 
 ### (3) Import and format data/functions ######################################
 # Import scripts used in the simulations, country-specific parameters, and    #
@@ -189,6 +211,13 @@ if (use.tensims==TRUE) {
 filename <- paste0(mycountry, "_", vacc_program, "_", vacc_subprogram, "_", Sys.Date(), ".csv")
 filename1<- paste0(output.dir, "/", filename)
 finalsummary<-summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
+
+
+# Update scenario tracker
+if (automate==TRUE){
+  scenario_tracker$completed[scen_num] <- "TRUE"
+  write.csv(scenario_tracker, paste(input.dir, "scenario_tracker.csv", sep="/"))
+}
 
 print(begin)
 print(Sys.time())
