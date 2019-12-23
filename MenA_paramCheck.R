@@ -227,6 +227,7 @@ CheckDemogParameters<-function(params) {
 }
 
 CheckSetParameters<-function(setparams) {
+  
   spmessage<<-""
   if (!(setparams$myregion %in% c("hyper", "not_hyper"))) {
     spmessage<<-"myregion must be set to either hyper or not_hyper."
@@ -249,12 +250,9 @@ CheckSetParameters<-function(setparams) {
       return(FALSE)
       }
   }
-  if (PSA != FALSE) {
-    PSA<-FALSE
-    spmessage<<-"Sorry, only PSA=FALSE is available at this time."
-  }
+
   x<-suppressWarnings(try(as.numeric(setparams$phi)))
-  y<-suppressWarnings(try(as.numeric(setparams$sd)))
+  y<-suppressWarnings(try(as.numeric(setparams$seed)))
   z<-suppressWarnings(try(as.numeric(setparams$nSims)))
   if (class(x) == "try-error" || is.na(x) || class(y) == "try-error" || is.na(y) || class(z) == "try-error" || is.na(z)) {
     spmessage<<-"phi, sd, and nSims must all be numeric."

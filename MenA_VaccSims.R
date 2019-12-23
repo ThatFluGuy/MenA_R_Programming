@@ -46,9 +46,9 @@ automate <- TRUE
 begin <- Sys.time()
 start <- as.Date("1951-01-01") # Use 1/1/1951 to give 50 years burn-in
 end <- as.Date("2100-12-31")
-PSA <- FALSE
-sd <- 4567 # Seed for random sto, use same for all scenarios
-nSims <- 117  # Update: 100 takes around 12 minutes if using 4 cores.
+PSA <- TRUE
+seed <- 4567 # Seed for random sto, use same for all scenarios
+nSims <- 200  # Update: 100 takes around 12 minutes if using 4 cores.
 use.tensims <- FALSE # If desired, output results from 10 sims for debugging
 
 # Directory containing inputs from https://montagu.vaccineimpact.org/
@@ -107,8 +107,8 @@ source("MenA_summarization_functions.R")
 source("MenA_calibration_plots.R")
 
 # (B) Check parameters set above
-setparams<-as.list(c(mycountry, as.character(start), as.character(end), myregion, PSA, vacc_program, phi, sd, nSims, input.dir, output.dir))
-names(setparams)<-c("mycountry", "start", "end", "myregion", "PSA", "vacc_program", "phi", "sd", "nSims", "input.dir", "output.dir")
+setparams<-as.list(c(mycountry, as.character(start), as.character(end), myregion, PSA, vacc_program, phi, seed, nSims, input.dir, output.dir))
+names(setparams)<-c("mycountry", "start", "end", "myregion", "PSA", "vacc_program", "phi", "seed", "nSims", "input.dir", "output.dir")
 if (CheckSetParameters(setparams)==FALSE) {
     stop(spmessage)
 } else {
@@ -163,8 +163,8 @@ myparams$births <- myparams$births * pct.modeled
 # Set up random seed vector and use parallel processing to run simulations.   #
 
 summarizeme <- 1
-# Set the random number seed based on sd, then create a vector of random number seeds (consistent within sd values)
-set.seed(sd, kind = NULL, normal.kind = NULL)
+# Set the random number seed based on seed, then create a vector of random number seeds (consistent within seed values)
+set.seed(seed, kind = NULL, normal.kind = NULL)
 seed.vec <- unique(floor(runif(nSims*2, 0, 1000000)))[1:nSims]
 
 # Begin simulations
@@ -176,8 +176,8 @@ my_data <- foreach(n=1:nSims, .verbose=TRUE, .packages = c("lubridate", "dplyr",
   finalpop<-MenASimulation(startdt=start, enddt=end, fp=paramfixed.row, initpop=initpop, vacc_program=vacc_program,
                            countryparams=myparams, region=myregion, country=mycountry, inputdir=input.dir)
   if (summarizeme > 0) {
-    #age-specific death rates (for PSA=no, other option not implemented yet)
-    cfr <- c(0.106, 0.096, 0.089, 0.086, 0.079, 0.122) #used AFTER simulation macro in SAS
+    # Using PSA option for CFR
+    cfr <- as.numeric(paramfixed.row[, c("cfr1", "cfr2", "cfr3", "cfr4", "cfr5", "cfr6")])
     summarizeOneSim(finalpop, n, cfr)
     } #end of conditional summarization
 } #end of foreach loop
@@ -194,9 +194,9 @@ totalPop <- cohortSize %>%
   group_by(year) %>% summarize(tot=sum(cohortsize))
 
 
-# Final summarization
-filename = paste0(mycountry, "_", vacc_program, "_", Sys.Date(), ".csv")
-# Detail output - for testing
+### (5) Create outputs ########################################################
+
+# (A) Detail output for testing if needed
 detail<-1
 if (use.tensims==TRUE) {
   tensims<-rbindlist(my_data[1:10])
@@ -207,16 +207,57 @@ if (use.tensims==TRUE) {
   print(paste("Simulation detail written to", detfile))
 }
 
-# Output summary results for the country/scenario set
+# (B) Output summary results for the country/scenario set
 filename <- paste0(mycountry, "_", vacc_program, "_", vacc_subprogram, "_", Sys.Date(), ".csv")
 filename1<- paste0(output.dir, "/", filename)
 finalsummary<-summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
 
 
+# (C) Output PSA results if needed
+if (PSA==TRUE){
+  filename.psa <- paste0("PSA", "_",  mycountry, "_", vacc_program, "_", vacc_subprogram, "_",
+                    Sys.Date(), ".csv")
+  filename.psa1 <- paste0(output.dir, "/", filename.psa)
+  
+  psa.output <- data.frame(disease=character(0), run_id=numeric(0), year=numeric(0),
+                           age=numeric(0), country=character(0), 
+                           country_name=character(0), cohort_size=numeric(0),
+                           cases=numeric(0), dalys=numeric(0), deaths=numeric(0),
+                           stringsAsFactors = FALSE)
+  
+  names.df <- data.frame(
+    country_code=c("BDI", "BEN", "BFA", "CAF", "CIV", "CMR", "COD", "ERI", "ETH", "GHA", "GIN", "GMB",
+                   "GNB", "KEN", "MLI", "MRT", "NER", "NGA", "RWA", "SDN", "SEN", "SSD", "TCD", "TGO",
+                   "TZA", "UGA"),
+    country=c("Burundi", "Benin", "Burkina Faso", "Central African Republic",
+              "Cote d'Ivoire", "Cameroon", "Congo, the Democratic Republic of the",
+              "Eritrea", "Ethiopia", "Ghana", "Guinea", "Gambia", "Guinea-Bissau", "Kenya",                                
+              "Mali", "Mauritania", "Niger", "Nigeria", "Rwanda", "Sudan", "Senegal",                              
+              "South Sudan", "Chad", "Togo", "Tanzania, United Republic of", "Uganda" ))
+  
+  oldnames=c("AgeInYears", "Cases", "Deaths", "DALYs", "cohortsize", "simulation")
+  newnames=c("age", "cases", "deaths", "dalys", "cohort_size", "run_id")
+  
+  for (s in 1:nSims){
+    result.df <- left_join(x=my_data[[s]], y=cohortSize, by=c("year", "AgeInYears"))
+    result.df <- result.df %>% rename_at(vars(oldnames), ~newnames)
+    psa.output <- bind_rows(psa.output, result.df)
+  }
+  records <- length(psa.output$disease)
+  psa.output$disease <- rep("MenA", times=records)
+  psa.output$country <- rep(mycountry, times=records)
+  psa.output$country_name <- rep(names.df$country[names.df$country_code==mycountry], times=records)
+  
+  write.csv(psa.output, filename.psa1)
+  print(paste("Simulation detail written to", filename.psa1))
+}
+
+
 # Update scenario tracker
 if (automate==TRUE){
   scenario_tracker$completed[scen_num] <- "TRUE"
-  write.csv(scenario_tracker, paste(input.dir, "scenario_tracker.csv", sep="/"))
+  write.csv(scenario_tracker, paste(input.dir, "scenario_tracker.csv", sep="/"),
+            row.names=FALSE)
 }
 
 print(begin)

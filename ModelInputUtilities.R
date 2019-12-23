@@ -366,7 +366,13 @@ GetWAIFWmatrix<-function(params) {
 # Goal is to prevent hard-coding of parameters in model                       #
 #_____________________________________________________________________________#
 
-GetModelParams<-function(path=scripts.dir, region.val) {
+GetModelParams<-function(path=scripts.dir, region.val, 
+                         scaling=c(1, 0.75, 0.75, 0.75, 0.75, 0.75, 0.75)) {
+  
+  # Inputs: 
+  # path        - character scaler with directory where parameter file exists
+  # region.val  - character scaler indicating region type (hyper vs not)
+  # scaling     - numeric vector to scale hyper bd1-bd7 down to not-hyper
 
   if (!(region.val %in% c("hyper", "not_hyper"))){
     mymsg <- "region must be hyper or not_hyper"
@@ -381,8 +387,16 @@ GetModelParams<-function(path=scripts.dir, region.val) {
   }
   
   params <- read.csv(param.file, stringsAsFactors = FALSE)  #data frame
-  params.region <- subset(params, region==region.val)
-  return(params.region)
+  if (region.val=="not_hyper"){
+    params$bd1 <- params$bd1 * scaling[1]
+    params$bd2 <- params$bd2 * scaling[2]
+    params$bd3 <- params$bd3 * scaling[3]
+    params$bd4 <- params$bd4 * scaling[4]
+    params$bd5 <- params$bd5 * scaling[5]
+    params$bd6 <- params$bd6 * scaling[6]
+    params$bd7 <- params$bd7 * scaling[7]
+  }
+  return(params)
 }
 
 
