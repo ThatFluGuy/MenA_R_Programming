@@ -466,3 +466,98 @@ GetModelPct <- function(path=input.dir, mycountry.s=mycountry){
 
   return(popmod.df$pct_pop_modeled[popmod.df$country_code==mycountry.s])  
 }
+
+### (11) Combine country-specific files #######################################
+# For a defined vaccination program and sub-program, read in output files     #
+# from all countries, format per VIMC specifications, and write the combined  #
+# file to the output directory.                                               #       
+
+# Current status: Trying to make it so tryCatch stops the processing if there
+# is an error and does not print the "output written" message
+
+combineOutputFiles <- function(path=output.dir, vacc_program, vacc_subprogram="default"){
+
+  # Inputs
+  # path            - character scalar indicating location of output files
+  # vacc_program    - character scalar for program, as "none", "campaign", "both"
+  # vacc_subprogram - character scalar for sub-program, as "default" or "bestcase
+  
+  # Output: writes a .csv file
+  
+  
+  # (A) Check inputs
+  if (!dir.exists(path)) {
+      stop(paste(path, "is not a valid directory", sep=" "))
+  }
+  if (!(vacc_program %in% c("none", "campaign", "routine", "both"))){
+    stop("vacc_progam must be one of 'none', 'campaign', 'routine', or 'both'")
+  }
+  if (!(vacc_subprogram %in% c("default", "bestcase"))){
+    stop("vacc_subprogram must be one of 'default', 'bestcase'")
+  }
+  
+  # (B) Set up some needed data.frames and vectors
+  names.df <- data.frame(
+    country_code=c("BDI", "BEN", "BFA", "CAF", "CIV", "CMR", "COD", "ERI", "ETH", "GHA", "GIN", "GMB",
+                     "GNB", "KEN", "MLI", "MRT", "NER", "NGA", "RWA", "SDN", "SEN", "SSD", "TCD", "TGO",
+                     "TZA", "UGA"),
+    country=c("Burundi", "Benin", "Burkina Faso", "Central African Republic",
+              "Cote d'Ivoire", "Cameroon", "Congo, the Democratic Republic of the",
+              "Eritrea", "Ethiopia", "Ghana", "Guinea", "Gambia", "Guinea-Bissau", "Kenya",                                
+              "Mali", "Mauritania", "Niger", "Nigeria", "Rwanda", "Sudan", "Senegal",                              
+              "South Sudan", "Chad", "Togo", "Tanzania, United Republic of", "Uganda" ))
+  
+  oldnames=c("AgeInYears", "Cases", "Deaths", "DALYs", "cohortsize")
+  newnames=c("age", "cases", "deaths", "dalys", "cohort_size")
+
+  output.df <- data.frame(disease=character(0), year=numeric(0), age=numeric(0),
+                          country=character(0), country_name=character(0),
+                          cohort_size=numeric(0), cases=numeric(0),
+                          dalys=numeric(0), deaths=numeric(0), stringsAsFactors = FALSE)
+
+  # (C) Get list of all relevant output files and cycle through each
+  # Read the file in, verify size, rename variables, and bind rows to output
+  files.v <- list.files(path, pattern=paste(vacc_program, vacc_subprogram, sep="_"))
+  
+  for (f in 1:length(files.v)){
+    country_code <- substr(files.v[f], 1, 3)
+    result.df <- read.csv(paste(output.dir, files.v[f], sep="/"))
+    
+    size <- length(result.df$year)
+    if (size != 7171){
+      stop(paste("Input file is", size, "records and should be 7171", sep=" "))
+    }
+    
+    result.df$disease <- rep("MenA", times=size)
+    result.df$country <- rep(country_code, times=size)
+    result.df$country_name <- as.character(rep(names.df$country[names.df$country_code==country_code], times=size))
+    
+    result.df <- result.df %>%
+      rename_at(vars(oldnames), ~newnames)
+    
+    output.df <- bind_rows(output.df, result.df[, names(output.df)])
+  }
+
+  if(vacc_program=="none"){
+    filename <- paste(output.dir, "/mena-no-vaccination-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
+  } else {
+   filename <- paste(output.dir, "/mena-", vacc_program, "-", vacc_subprogram,
+                    "-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
+  }
+  
+  outval <- tryCatch({
+      write.csv(x=output.df, file=filename)
+      return(paste("Output written to:", filename, sep=" "))
+    }, warning=function(cond){
+      message("Trying to output gave a warning:")
+      message(cond)
+      return(NA)
+      break
+    }, error=function(cond){
+      message("Trying to output gave an error:")
+      message(cond)
+      return(NA)
+      break
+    }
+  )
+}
