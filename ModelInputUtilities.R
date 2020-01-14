@@ -481,33 +481,37 @@ GetModelPct <- function(path=input.dir, mycountry.s=mycountry){
   return(popmod.df$pct_pop_modeled[popmod.df$country_code==mycountry.s])  
 }
 
-### (11) Combine country-specific files #######################################
+### (11) Combine central estimate files #######################################
 # For a defined vaccination program and sub-program, read in output files     #
 # from all countries, format per VIMC specifications, and write the combined  #
 # file to the output directory.                                               #       
 
-# Current status: Trying to make it so tryCatch stops the processing if there
-# is an error and does not print the "output written" message
-
-combineOutputFiles <- function(path=output.dir, vacc_program, vacc_subprogram="default"){
+combineOutputFiles <- function(path=output.dir, vacc_program="none",
+                               vacc_subprogram="default",
+                               deliv.path="G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2019"
+                               ){
 
   # Inputs
   # path            - character scalar indicating location of output files
   # vacc_program    - character scalar for program, as "none", "campaign", "both"
   # vacc_subprogram - character scalar for sub-program, as "default" or "bestcase
+  # deliv.path      - character scalar for deliverables folder for compiled results
   
   # Output: writes a .csv file
   
   
   # (A) Check inputs
   if (!dir.exists(path)) {
-      stop(paste(path, "is not a valid directory", sep=" "))
+    stop(paste(path, "is not a valid directory", sep=" "))
   }
   if (!(vacc_program %in% c("none", "campaign", "routine", "both"))){
     stop("vacc_progam must be one of 'none', 'campaign', 'routine', or 'both'")
   }
   if (!(vacc_subprogram %in% c("default", "bestcase"))){
     stop("vacc_subprogram must be one of 'default', 'bestcase'")
+  }
+  if (!dir.exists(deliv.path)){
+    stop(paste(path, "is not a valid directory", sep=" "))
   }
   
   # (B) Set up some needed data.frames and vectors
@@ -532,6 +536,7 @@ combineOutputFiles <- function(path=output.dir, vacc_program, vacc_subprogram="d
   # (C) Get list of all relevant output files and cycle through each
   # Read the file in, verify size, rename variables, and bind rows to output
   files.v <- list.files(path, pattern=paste(vacc_program, vacc_subprogram, sep="_"))
+  files.v <- files.v[grep("^(?!PSA)", files.v, perl=TRUE)]
   
   for (f in 1:length(files.v)){
     country_code <- substr(files.v[f], 1, 3)
@@ -553,25 +558,27 @@ combineOutputFiles <- function(path=output.dir, vacc_program, vacc_subprogram="d
   }
 
   if(vacc_program=="none"){
-    filename <- paste(output.dir, "/mena-no-vaccination-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
+    filename <- paste(deliv.path, "/mena-no-vaccination-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
   } else {
-   filename <- paste(output.dir, "/mena-", vacc_program, "-", vacc_subprogram,
+   filename <- paste(deliv.path, "/mena-", vacc_program, "-", vacc_subprogram,
                     "-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
   }
   
+  # (D) Output to the appropriate directory, with error-handling
   outval <- tryCatch({
-      write.csv(x=output.df, file=filename)
-      return(paste("Output written to:", filename, sep=" "))
+      write.csv(x=output.df, file=filename, row.names=FALSE)
     }, warning=function(cond){
       message("Trying to output gave a warning:")
       message(cond)
       return(NA)
-      break
     }, error=function(cond){
       message("Trying to output gave an error:")
       message(cond)
       return(NA)
-      break
     }
   )
+  
+  if (is.null(outval)){print(paste("Output written to:", filename, sep=" "))}
+  
 }
+
