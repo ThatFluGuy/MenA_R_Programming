@@ -341,14 +341,18 @@ GetDiseaseStateDist<-function(directory, region) {
 #______________________________________________________________________________________#
 # Chloe edit 3/29: need to expand further to account for higher ages part of sim now.
 # Chloe edit 5/5: left all these new additions to the GetWAIFmatrix() function below.
-# EJ 10/23: simplify the WAIFW construction, base it on the parameter input to OneSim instead of external csv.  Expand in one step instead of two.  Implement five age group WAIFW version.
+# EJ 10/23: simplify the WAIFW construction, base it on the parameter input to OneSim 
+# instead of external csv.  Expand in one step instead of two.  Implement five age group
+# WAIFW version.
+# MJ 1/29/2020: Critical correction, the bd parameters were assigned incorrectly
 GetWAIFWmatrix<-function(params) {
+  
   Dwaifw <- matrix(0, nrow=5, ncol=5)
   Dwaifw[1,] <- rep(params$bd1, 5)
   Dwaifw[2,] <- rep(params$bd2, 5)
-  Dwaifw[3,] <- c(rep(params$bd3, 2), params$bd4, rep(params$bd3, 2))
-  Dwaifw[4,] <- c(rep(params$bd5, 3), params$bd6, rep(params$bd5, 1))
-  Dwaifw[5,] <- rep(params$bd7, 5)
+  Dwaifw[3,] <- c(rep(params$bd3, 2), params$bd6, rep(params$bd3, 2))
+  Dwaifw[4,] <- c(rep(params$bd4, 3), params$bd7, rep(params$bd4, 1))
+  Dwaifw[5,] <- rep(params$bd5, 5)
   Rwaifw <- Dwaifw * params$br
   Rwaifw.expanded <- Rwaifw[rep(seq_len(nrow(Rwaifw)), times=c(60, 60, 60, 60, 1201)),] #Replicates the first 4 rows 60 times, the last row 1201 times.  One row per month, so ages 0-4, 5-9, 10-14, 15-19, 20-120
   Dwaifw.expanded <- Dwaifw[rep(seq_len(nrow(Dwaifw)), times=c(60, 60, 60, 60, 1201)),]
@@ -358,6 +362,7 @@ GetWAIFWmatrix<-function(params) {
   dimnames(wboth)[[3]]<-c("rainy", "dry")
   return(wboth)
 }
+
 
 
 ### (8) GetModelParams ########################################################

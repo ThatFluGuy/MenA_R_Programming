@@ -104,7 +104,7 @@ summarizeForOutput<-function(results_list, cohort, write, filename) {
   finalsummary<-merge(x = simsummary, y = cohort, by = c("year", "AgeInYears"))
   finalsummary <- finalsummary[order(finalsummary$year, finalsummary$AgeInYears),]
   if (write==TRUE){
-    write.csv(finalsummary, filename)
+    write.csv(finalsummary, filename, row.names=FALSE)
     print(paste("Output written to", filename))
   }
   return(finalsummary)
