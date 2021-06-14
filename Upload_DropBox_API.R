@@ -30,11 +30,19 @@ db.token <- readRDS(paste(deliv.dir, "db.token.RDS", sep=""))
 files.v <- list.files(path=deliv.dir, pattern="stochastic_burden_est") 
 
 
-for (f in 2:length(files.v)){
+#for (f in 1:length(files.v)){
+for (f in 128:130){
   drop_upload(file=paste(deliv.dir, files.v[f], sep="/"),
-              path="request/KjNv7oMaN9VqdyObg1Vr",
+              #path="request/KjNv7oMaN9VqdyObg1Vr",
+              path="VIMC/Upload_2019",
               dtoken=db.token)
 }
 
 # Uploaded first file as a test run on 2020.01.16
 # Waiting for confirmation from Dinithi
+
+# Uploading directly to VIMC dropbox link doesn't work.
+# Upload to personal account, then from outside firewall tranfer from within dropbox
+# As of 2020/02/01, uploaded files   1 -   5 in the files.v list
+# As of 2020/02/14, uploaded files   6 -  99 in the files.v list
+# As of 2020/02/17, uploaded files 100 - 130 in the files.v list

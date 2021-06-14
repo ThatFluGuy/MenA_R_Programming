@@ -485,7 +485,6 @@ GetModelPct <- function(path=input.dir, mycountry.s=mycountry){
 # file to the output directory.                                               #       
 
 combineOutputFiles <- function(path=output.dir, vacc_program="none",
-                               vacc_subprogram="default",
                                deliv.path="G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2019"
                                ){
 
@@ -502,11 +501,8 @@ combineOutputFiles <- function(path=output.dir, vacc_program="none",
   if (!dir.exists(path)) {
     stop(paste(path, "is not a valid directory", sep=" "))
   }
-  if (!(vacc_program %in% c("none", "campaign", "routine", "both"))){
+  if (!(vacc_program %in% paste0("scenario", 1:9))){
     stop("vacc_progam must be one of 'none', 'campaign', 'routine', or 'both'")
-  }
-  if (!(vacc_subprogram %in% c("default", "bestcase"))){
-    stop("vacc_subprogram must be one of 'default', 'bestcase'")
   }
   if (!dir.exists(deliv.path)){
     stop(paste(path, "is not a valid directory", sep=" "))
@@ -531,9 +527,13 @@ combineOutputFiles <- function(path=output.dir, vacc_program="none",
                           cohort_size=numeric(0), cases=numeric(0),
                           dalys=numeric(0), deaths=numeric(0), stringsAsFactors = FALSE)
 
+  # Get output template
+  template.df <- read.csv(paste0(deliv.path, "/central-burden-template.202005covid-4.MenA_KPW-Jackson_standard.csv"),
+                          stringsAsFactors = FALSE)
+  
   # (C) Get list of all relevant output files and cycle through each
   # Read the file in, verify size, rename variables, and bind rows to output
-  files.v <- list.files(path, pattern=paste(vacc_program, vacc_subprogram, sep="_"))
+  files.v <- list.files(path, pattern=vacc_program)
   files.v <- files.v[grep("^(?!PSA)", files.v, perl=TRUE)]
   
   for (f in 1:length(files.v)){
@@ -555,16 +555,14 @@ combineOutputFiles <- function(path=output.dir, vacc_program="none",
     output.df <- bind_rows(output.df, result.df[, names(output.df)])
   }
 
-  if(vacc_program=="none"){
-    filename <- paste(deliv.path, "/mena-no-vaccination-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
-  } else {
-   filename <- paste(deliv.path, "/mena-", vacc_program, "-", vacc_subprogram,
-                    "-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
-  }
+  output.df2 <- left_join(template.df %>% select(disease, year, age, country), 
+                          output.df, by=c("disease", "year", "age", "country")) 
+
+  filename <- paste(deliv.path, "/mena-", vacc_program, "-202005covid-4.MenA_KPW-Jackson.csv", sep="")
   
   # (D) Output to the appropriate directory, with error-handling
   outval <- tryCatch({
-      write.csv(x=output.df, file=filename, row.names=FALSE)
+      write.csv(x=output.df2, file=filename, row.names=FALSE)
     }, warning=function(cond){
       message("Trying to output gave a warning:")
       message(cond)
