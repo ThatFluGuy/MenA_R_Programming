@@ -105,7 +105,6 @@ source("ModelInputUtilities.R")
 source("MenA_OneSim.R")
 source("MenA_helper_functions.R")
 source("MenA_summarization_functions.R")
-source("MenA_calibration_plots.R")
 
 # Variables and functions to keep between iterations when automate==TRUE
 keep.v <- c("automate", "input.dir", "output.dir", "deliv.dir", "script.dir", "scenario_tracker",
