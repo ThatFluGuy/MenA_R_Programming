@@ -32,3 +32,8 @@ PLoS One 2018; 13(10):e0206117
 
 ## Repository overview
 This repository contains the R code and several ancillary files needed to run the epidemic simulation model. A description of the individual programs is provided in the file "Program_descriptions.md". Note that this repository does not contain all the data needed to run the simulations. Input files (including demographics and vaccine coverage) are stored in a separate directory that is not included in this repository. Those files include proprietary data on Gavi's demand forecasts, which cannot be publically posted here.
+
+## Current status
+The master branch is currently version 2019.02 of the project, which is the version used for the 2019 round of impact estimates for Gavi.
+The COVID branch is not under active development, but was used for estimating the impact of COVID-related disruptions on MenA vaccination programs.
+
