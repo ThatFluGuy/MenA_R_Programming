@@ -1,19 +1,25 @@
 #### Program information ######################################################
 # Package: MenA_VaccSims                                                      #
-# Source file name: MenA_summarization_functions.R                            #
+# Source file name: fxSummarization.R                                         #
 # Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
-# Version Date 12/17/2019                                                     #
+# Version Date 08/20/21                                                       #
 #_____________________________________________________________________________#
-# Program description: Contains functions used to summarize simulation output #
-# -getCohortSize: calulate total poplation in each year and year of age       #
-# -summarizeOneSim: Collapse results of one simulation into a data frame      #
+# This program contains a series of custom functions for summarizing the      #
+# output of multiple simulation runs to get means and population sizes.       #
+#_____________________________________________________________________________#
+# Functions in this program:                                                  #
+# 1) getCohortSize: calulate total poplation in each year and year of age     #
+# 2) summarizeOneSim: Collapse results of one simulation into a data frame    #
 #   with Cases, Deaths, Dalys by year and year of age.                        #
-#	-SummarizeForOutput : takes a list of products of summarizeOneSim and       #  
+#	3) SummarizeForOutput : takes a list of products of summarizeOneSim and     #  
 #   calculates mean over all simulations; writes output file                  #
+#_____________________________________________________________________________#
+# These functions were written by Chris Stewart, with some editing by Chloe   #
+# Krakhauer and Mike Jackson                                                  #
 #_____________________________________________________________________________#
 
 ### (1) Function to calculate cohort size #####################################
-getCohortSize<-function(poparray) { 
+getCohortSize <- function(poparray) { 
   
   # Inputs: poparray - array with population by age, model compartment, and week
   # Outputs: data.frame with cohort sizes
@@ -43,7 +49,7 @@ getCohortSize<-function(poparray) {
 
 
 ### (2) Count cases, deaths, and DALYs ########################################
-summarizeOneSim<-function(poparray, sim.number=n, cfr.v=cfr, le.df=my.lifex) { 
+summarizeOneSim <- function(poparray, sim.number=n, cfr.v=cfr, le.df=my.lifex) { 
   
   # Inputs:
   # poparray - array with population by age, model compartment, and week
@@ -65,7 +71,6 @@ summarizeOneSim<-function(poparray, sim.number=n, cfr.v=cfr, le.df=my.lifex) {
     filter(year>=2000) %>% group_by(year, AgeInYears) %>% 
     summarize(Cases=sum(value))
 
-  
   # Vector of case fatality ratios
   cfr.age <- c(cfr.v[1], rep(cfr.v[2], 4), rep(cfr.v[3], 5), rep(cfr.v[4], 5),
                rep(cfr.v[5], 5), rep(cfr.v[6], 51))
@@ -84,7 +89,7 @@ summarizeOneSim<-function(poparray, sim.number=n, cfr.v=cfr, le.df=my.lifex) {
 
 ### (3) Average results across sims ###########################################
 
-summarizeForOutput<-function(results_list, cohort, write, filename) {
+summarizeForOutput <- function(results_list, cohort, write, filename) {
   if (length(results_list) > 1) {
     allsims <- rbindlist(results_list)
     simmeans <- allsims %>% 

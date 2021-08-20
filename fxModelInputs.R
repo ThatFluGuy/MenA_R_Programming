@@ -1,14 +1,15 @@
 #### Program information ######################################################
 # Package: MenA_VaccSims                                                      #
-# Source file name: ModelInputUtilities.R                                     #
+# File name: fxModelInputs.R                                                  #
 # Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
-# Version Date 12/17/19                                                       #
-#_______________________________________ _____________________________________#
-# Input datasets: specify folder containing downloads from                    #
-#   https://montagu.vaccineimpact.org/                                        #
+# Version Date 08/20/21                                                       #
+#_____________________________________________________________________________#
+# This program contains a series of custom functions for importing data used  #
+# by the NmA simulation programs. These are ultimately downloaded from the    #
+# Vaccine Impact Modeling Consortium at: https://montagu.vaccineimpact.org/   #
 #_____________________________________________________________________________#
 # Functions in this program:                                                  #
-# (1) GetMontaguDemogData                                                     #
+# (1) GetMontaguDemogData - downloads data from Montagu via API.              #
 # (2) GetDemographicParameters                                                #
 # (3) checkVIMCdates                                                          #
 # (4) GetPopAgeDist                                                           #
@@ -17,6 +18,7 @@
 # (7) GetWAIFWmatrix                                                          #
 # (8) GetModelParams                                                          #
 # (9) GetLifeEx                                                               # 
+# (1) InitializePopulation
 #_____________________________________________________________________________#
 # Parameters:                                                                 #
 # Start and end dates of simulation - to be specified in calling program      #
@@ -30,6 +32,9 @@
 #       -distribution for initializing population                             #
 #       -demographics: birth, death, infant mortality rate for simulation     #
 #       -vaccination scenarios                                                #
+#_____________________________________________________________________________#
+# These functions were written by Chris Stewart, with some editing by Chloe   #
+# Krakhauer and Mike Jackson                                                  #
 #_____________________________________________________________________________#
 
 
@@ -46,18 +51,19 @@
 # install.packages("montagu")                                                 #
 #_____________________________________________________________________________#
 
-# Chloe 7/12: note that death rates by age (TDB) and numbers of births will need to be added to this function (or something like it) to be used
-# in the future; existence of that data in input folder currently assumed in functions below.
+GetMontaguDemogData<-function(username=NULL, password=NULL, touchstone="201710gavi-5", 
+                               destpath=NULL){
 
-GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710gavi-5", destpath=NULL) {
-
-  svr<-montagu_server(name="production", hostname="montagu.vaccineimpact.org", username=username, password=password)
+  svr <- montagu_server(name="production", hostname="montagu.vaccineimpact.org", 
+                        username=username, password=password)
   montagu_server_global_default_set(svr)
   tchlist<-montagu_touchstones_list(svr)
+  
   if (touchstone %in% as.vector(tchlist$id)) {
     dlist<-montagu_demographics_list(touchstone_id = touchstone)
     demogidlist<-as.vector(dlist$id)
     needed_data<-c("cbr", "cdr", "unwpp_imr", "qq_pop", "tot_pop")
+    
     for (i in 1:length(needed_data)) { 
       if (needed_data[i] %in% demogidlist) {
         dat<-montagu::montagu_demographic_data(type=needed_data[i], touchstone_id=tch)
@@ -65,6 +71,7 @@ GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710g
         #filename like: 201710gavi-5_dds-201710_unwpp_imr_both.csv
         # [touchstone id + source + demog id + _both]
         #but it doesn't matter, my function lookst for demog id in name
+        
         if (length(destpath)>0) {
           filename<-paste0(datadir, touchstone, datrow$source, datrow$id, "_both.csv")
           write.csv(dat, filename)
@@ -91,39 +98,44 @@ GetMontaguDemogData<-function( username=NULL, password=NULL, touchstone="201710g
 # the MenA_OneSim.R program. Future work may move this to single-year buckets.#
 #_____________________________________________________________________________#
 
-GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1) {
+GetDemographicParameters <- function(path, mycountry, start, end, fillThreshold=1) {
   
   setwd(path)
   
   #### (1) Get total population size
-  totpop<-GetFilename(path, "tot_pop_both")
+  totpop <- GetFilename(path, "tot_pop_both")
   if (is.character(totpop)==FALSE) { stop(mymsg) }
-  dfpop<-read.csv(totpop)
+  dfpop <- read.csv(totpop)
+  
   if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfpop, dfdesc="tot_pop_both")==FALSE) { stop (filemsg)}
-  ctrypop<-dfpop[dfpop$country_code==mycountry, c("country_code", "year", "value")]
-  ctrypopfull<-checkVIMCdates(mydata=ctrypop, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  ctrypop <- dfpop[dfpop$country_code==mycountry, c("country_code", "year", "value")]
+  ctrypopfull <- checkVIMCdates(mydata=ctrypop, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  
   if (is.data.frame(ctrypopfull)==FALSE) { stop(paste(datemsg, " tot_pop_both")) }
-  ctrypopfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  ctrypopfull %>% group_by(country_code) %>% summarize(min(year), max(year))
   
   #### (2) Get birthrate and number of births each year
-  cbr<-GetFilename(path, "cbr_both")
+  cbr <- GetFilename(path, "cbr_both")
   births <- GetFilename(path, "births")
   if (is.character(cbr)==FALSE) { stop(mymsg) }
   if (is.character(births)==FALSE) { stop(mymsg) }
-  dfbirth<-read.csv(cbr)
-  numbirth<-read.csv(births)
+  
+  dfbirth <- read.csv(cbr)
+  numbirth <- read.csv(births)
+  
   if (CheckDemogFileStructure(mycountry=mycountry, mydf=dfbirth, dfdesc="cbr_both")==FALSE) { stop (filemsg)}
   if (CheckDemogFileStructure(mycountry=mycountry, mydf=numbirth, dfdesc="births")==FALSE) { stop (filemsg)}
-  ctrybirth<-dfbirth[dfbirth$country_code==mycountry, c("country_code", "year", "value")]
-  numbirth_ctry<-numbirth[numbirth$country_code==mycountry, c("country_code", "year", "value")]
-  ctrybirthfull<-checkVIMCdates(mydata=ctrybirth, startyr=year(start), endyr=year(end), threshold=fillThreshold)
-  numbirthfull<-checkVIMCdates(mydata=numbirth_ctry, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  ctrybirth <- dfbirth[dfbirth$country_code==mycountry, c("country_code", "year", "value")]
+  numbirth_ctry <- numbirth[numbirth$country_code==mycountry, c("country_code", "year", "value")]
+  ctrybirthfull <- checkVIMCdates(mydata=ctrybirth, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  numbirthfull <- checkVIMCdates(mydata=numbirth_ctry, startyr=year(start), endyr=year(end), threshold=fillThreshold)
+  
   if (is.data.frame(ctrybirthfull)==FALSE) { stop(paste(datemsg, " cbr_both")) }
   if (is.data.frame(numbirthfull)==FALSE) { stop(paste(datemsg, " births")) }
-  ctrybirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
-  numbirthfull%>%group_by(country_code)%>%summarize(min(year), max(year))
+  ctrybirthfull %>% group_by(country_code) %>% summarize(min(year), max(year))
+  numbirthfull %>% group_by(country_code) %>% summarize(min(year), max(year))
  
-  build0<-merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
+  build0 <- merge(x=ctrypopfull, y=ctrybirthfull, by=c("country_code", "year"), all=TRUE)
   colnames(build0)[colnames(build0)=="value.x"] <- "totalpop"
   colnames(build0)[colnames(build0)=="value.y"] <- "birthrate"
   build1 <- merge(x=build0, y=numbirthfull, by=c("country_code", "year"), all=TRUE)
@@ -183,19 +195,20 @@ GetDemographicParameters<-function(path, mycountry, start, end, fillThreshold=1)
 ### (3) checkVIMCdates ########################################################
 # Function to check dates.                                                    #
 
-checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
-  #assume data has variables country and year
-  #will fill in up to a threshold (default = 1 year) with values from nearest year
+checkVIMCdates <- function(mydata, startyr, endyr, threshold=1) {
+  # Assume data has variables country and year
+  # Will fill in up to a threshold (default = 1 year) with values from nearest year
   datemsg<<-""
-  datesum<-mydata%>%dplyr::group_by(country_code)%>%dplyr::summarize(minyear=min(year), maxyear=max(year))
+  datesum <- mydata %>% dplyr::group_by(country_code) %>% 
+    dplyr::summarize(minyear=min(year), maxyear=max(year))
   if (datesum$minyear > startyr) {
-    prediff<-datesum$minyear-startyr
+    prediff <- datesum$minyear-startyr
     if (prediff <= threshold) {
       #fix by filling
-      prefill<-mydata[mydata$year==datesum$minyear,]
+      prefill <- mydata[mydata$year==datesum$minyear,]
       for (i in 1:prediff) {
-        prefill$year<-datesum$minyear-i
-        mydata<-rbind(mydata, prefill)
+        prefill$year <- datesum$minyear-i
+        mydata <- rbind(mydata, prefill)
       }
     } else {
     # over threshold message
@@ -205,12 +218,12 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
   }
   if (datesum$maxyear < endyr) {
     if (datesum$minyear-startyr <= threshold) {
-      postdiff<-endyr-datesum$maxyear
+      postdiff <- endyr-datesum$maxyear
       if (postdiff <= threshold) {
-        postfill<-mydata[mydata$year==datesum$maxyear,]
+        postfill <- mydata[mydata$year==datesum$maxyear,]
         for (i in 1:postdiff) {
-          postfill$year<-datesum$maxyear+i
-          mydata<-rbind(mydata, postfill)
+          postfill$year <- datesum$maxyear+i
+          mydata <- rbind(mydata, postfill)
         }
       } else {
         # over threshold message
@@ -229,39 +242,41 @@ checkVIMCdates<-function(mydata, startyr, endyr, threshold=1) {
 #  ASSUMES FILENAME CONTAINS "qq_pop_both"                                    #
 #  Called by InitializePopulation.R                                           #
 #_____________________________________________________________________________#
+
 GetPopAgeDist<-function(path, mycountry, start) {
   disterr<<-""
   setwd(path)
-  qqfile<-GetFilename(path, "qq_pop_both")
+  qqfile <- GetFilename(path, "qq_pop_both")
   if (is.character(qqfile)==FALSE) { stop(mymsg) }
-  qqdf<-read.csv(qqfile)
+  qqdf <- read.csv(qqfile)
   if (CheckDemogFileStructure(mycountry=mycountry, mydf=qqdf, dfdesc="qq_pop_both")==FALSE) { stop (filemsg)}
   #record for every 5th year - want the closest to start or before start?
   mround <- function(x,base){ 
     base*round(x/base) 
   }
-  popyr<-mround(year(start), 5)
-  qqkeep<-qqdf[qqdf$country_code==mycountry & qqdf$year==popyr,]
+  popyr <- mround(year(start), 5)
+  qqkeep <- qqdf[qqdf$country_code==mycountry & qqdf$year==popyr,]
  
   if (nrow(qqkeep) > 0) {
     if (!(DemogNumVarExists("age_from", qqkeep) & DemogNumVarExists("age_to", qqkeep))) { 
       disterr<<- "Non-numeric data in age band variables"
       return(FALSE) 
     }
+    
     if (!(DemogNumVarExists("age_to", qqkeep))) { return(FALSE) }
     #check min and max age band - now they all go up to 120 but lets be generous and say 90
     if (min(qqkeep$age_from > 0 || max(qqkeep$age_to) < 90) == FALSE) {
-      # Chloe edit 3/22/19: Removing this line so as to not lump all 30+ groups together and replacing with next one.
-      # qqkeep$ageband<-ifelse(qqkeep$age_from < 30, paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to), "Age_30")
-      qqkeep$ageband<-paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to)
-      bands<-qqkeep%>%group_by(country_code, ageband)%>%summarize(tot=sum(value),minage=min(age_from)) 
-      totpop<-qqkeep%>%group_by(country_code)%>%summarize(totpop=sum(value))
+      qqkeep$ageband <- paste0("Age_", qqkeep$age_from, "_",qqkeep$age_to)
+      bands <- qqkeep %>% group_by(country_code, ageband) %>% 
+        summarize(tot=sum(value),minage=min(age_from)) 
+      
+      totpop <- qqkeep %>% group_by(country_code) %>% summarize(totpop=sum(value))
       if (totpop[,2] > 0) {
-        numsall<-merge(x=bands, y=totpop, by="country_code")
-        numsall$fraction<-numsall$tot/numsall$totpop
+        numsall <- merge(x=bands, y=totpop, by="country_code")
+        numsall$fraction <- numsall$tot/numsall$totpop
         agedist <- numsall[order(numsall$minage),]
-        dist<-agedist$fraction
-        names(dist)<-agedist$ageband
+        dist <- agedist$fraction
+        names(dist) <- agedist$ageband
         return(dist)
       } else {
         disterr<<-"Population value is zero.  Please check qqpop file."
@@ -289,18 +304,19 @@ GetPopAgeDist<-function(path, mycountry, start) {
 destring <- function(x,keep="0-9.-") {
   return( as.numeric(gsub(paste("[^",keep,"]+",sep=""),"",x)) )
 }
-GetVaccScenario<-function(mycountry, scenario, sub.scenario, directory) { #sub.scenario allows for selection between bestcase and default vaccination scenario files
+
+GetVaccScenario <- function(mycountry, scenario, sub.scenario, directory) { #sub.scenario allows for selection between bestcase and default vaccination scenario files
   vaccmsg<<-""
   setwd(directory)
   if (scenario=="none") sub.scenario <- "NA"  #can't have a sub-scenario when there's no vaccinations
   if (scenario=="routine" | scenario=="both") {
-    filename<-GetFilename(directory, "mena-routine", sub.scenario)
+    filename <- GetFilename(directory, "mena-routine", sub.scenario)
   }
   if (scenario=="campaign") {
-    filename<-GetFilename(directory, "mena-campaign", sub.scenario)
+    filename <- GetFilename(directory, "mena-campaign", sub.scenario)
   }
   if (is.character(filename)==FALSE) { stop(mymsg) }
-  dfvacc<-read.csv(filename, stringsAsFactors = FALSE)
+  dfvacc <- read.csv(filename, stringsAsFactors = FALSE)
   if (IsCountryAndColAvailable(country_code=mycountry,mydf=dfvacc, forVacc=1)==FALSE) { stop(countrymsg) }
   #target and year validated above.  Do we need AgeLimCampaign? No its not used.
   if (scenario=="routine" || scenario=="both") {
@@ -309,13 +325,15 @@ GetVaccScenario<-function(mycountry, scenario, sub.scenario, directory) { #sub.s
         return(FALSE) 
         }
   }
-  ctryvacc<-dfvacc[dfvacc$country_code==mycountry, c("country_code", "year", "activity_type", "target" , "coverage")]
+  ctryvacc <- dfvacc[dfvacc$country_code==mycountry, c("country_code", "year", "activity_type", "target" , "coverage")]
   colnames(ctryvacc)[colnames(ctryvacc)=="coverage"] <-"CoverRoutine"
   ##target has "<NA>" where activity type = routine, hosing conversion
   #still getting coercion warning
   #getting this even though not strictly required by routine option
-  ctryvacc$DosesCampaign<-destring(ctryvacc$target)
-  newdf<-subset(ctryvacc, select=-c(target))
+  ctryvacc$DosesCampaign <- destring(ctryvacc$target)
+  newdf <- subset(ctryvacc, select=-c(target))
+  
+  return(newdf)
 }
 
 
@@ -323,29 +341,24 @@ GetVaccScenario<-function(mycountry, scenario, sub.scenario, directory) { #sub.s
 # Function GetDiseaseStateDist, called by InitializePopulation.R              #
 # Reads dist_both.csv, which is supplied with scripts; format should not vary #
 #_____________________________________________________________________________#
-GetDiseaseStateDist<-function(directory, region) {
+GetDiseaseStateDist <- function(directory, region) {
   setwd(directory)
-  dxfile<-GetFilename(directory, "dist_both.csv")
+  dxfile <- GetFilename(directory, "dist_both.csv")
   if (is.character(dxfile)==FALSE) { 
     stop(mymsg) 
     print("File [dist_both.csv] is packaged with the R scripts and should be in the same directory.")
   }
-  dist<-read.csv(dxfile, stringsAsFactors = TRUE)
-  distcol<-ifelse(region=='hyper', 4, 3)
-  statefract<-as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
+  dist <- read.csv(dxfile, stringsAsFactors = TRUE)
+  distcol <- ifelse(region=='hyper', 4, 3)
+  statefract <- as.vector(dist[,distcol]) # fraction of each disease state in each of 7 population groups
   return(statefract)
 }
 
 ### (7) GetWAIFWmatrix #################################################################
 # Get WAIFWmatrix: constructs expanded WAIFW matrix from supplied parameter data frame;# 
 #______________________________________________________________________________________#
-# Chloe edit 3/29: need to expand further to account for higher ages part of sim now.
-# Chloe edit 5/5: left all these new additions to the GetWAIFmatrix() function below.
-# EJ 10/23: simplify the WAIFW construction, base it on the parameter input to OneSim 
-# instead of external csv.  Expand in one step instead of two.  Implement five age group
-# WAIFW version.
-# MJ 1/29/2020: Critical correction, the bd parameters were assigned incorrectly
-GetWAIFWmatrix<-function(params) {
+
+GetWAIFWmatrix <- function(params) {
   
   Dwaifw <- matrix(0, nrow=5, ncol=5)
   Dwaifw[1,] <- rep(params$bd1, 5)
@@ -385,7 +398,7 @@ GetModelParams<-function(path=scripts.dir, region.val,
   }
   
   setwd(path)
-  param.file <-GetFilename(path, "posterior_parameters.csv")
+  param.file <- GetFilename(path, "posterior_parameters.csv")
   if (is.character(param.file)==FALSE) { 
     stop(mymsg) 
     print("File [posterior_parameters.csv] is packaged with the R scripts and should be in the same directory.")
@@ -587,3 +600,115 @@ combineOutputFiles <- function(path=output.dir, vacc_program="none",
   
 }
 
+#_____________________________________________________________________________#
+# INITIALIZE POPULATION Input datasets: PopInputAgeDist.csv, dist_both.csv    #
+#_____________________________________________________________________________#
+# Parameters:                                                                 #
+# Start and end dates of simulation - to be specified in calling program      #
+# Startpop from country params                                                #
+#	country name to get age distributions from popinputagedist.csv              #
+#	region = hyper/not hyper to get age-specific disease state distribution.    #
+#_____________________________________________________________________________#
+# Purpose: fill first "slice" of the simulation matrix with the population at #   
+# the starting point, divided by age and disease state. Matrix is 360 monthly #
+# ages by 8 disease states.                                                   #
+#_____________________________________________________________________________#
+# Created as function 3/5/18, by Chris Stewart chris.c.stewart@kp.org         #
+# Changes: remove loop, use vector multiplication instead,                    #
+# 30 age group only needs one value in input vectors                          #    
+# Change 10/23 EJ: removed the popsize argument, as it isn't used?            #
+#_____________________________________________________________________________#
+InitializePopulation<-function(scriptdir, inputdir, start, end, country="ETH", region="not_hyper", startSize) {
+  initmsg<<-""
+  #create the matrix
+  dur<- ceiling(difftime(end, start, units = "weeks"))
+  # poparray <- array(data=0, dim=c(361, 9, dur+1)) # Dimensions are [age groups, states, time]
+  # Chloe edit 3/22/19: allow for monthly ages through age 120, including age=0 months.
+  # Later on, for sake of comparison with Montagu estimates, will only look through age 70.
+  # Note this could make code extremely (and unecessarily) slow...maybe just through age 70 if that's the case?
+  # EJ edit: split Va into Vs and Vc
+  poparray <- array(data=0, dim=c(1441, 10, dur+1)) # Dimensions are [age groups, states, time]
+  dimnames(poparray)[[2]] <- c("Ns","Nc","Ls","Lc","Hs","Hc","Di","Vs", "Vc", "Inc")
+  #parameters for initializing
+  mypop<-GetPopAgeDist(path=inputdir, mycountry=country, start=start) 
+  # Chloe edit 3/22/19: Now, this should start with pop size of age bands between 0-4 and 100-120.
+  # Chloe edit 3/29/10: The error message below was originally intended for 7 age bands; 
+  # I'm leaving this unedited for now, since I'm not sure what final groups of age bands we will use. 
+  if (length(mypop) < 7) {
+    initmsg<<-"Incomplete age distribution information.  Please check the downloaded file [touchstone]_qq_pop_both.csv."
+    return(FALSE)
+  }
+  ##get age-specific proportions of each disease state into vectors: 7 ages X 7 disease states
+  ## Chloe 3/22/19: now, we have 21 ages and 7 disease states.
+  ## The line below gets fraction of each disease state in each of 7 population groups (5-year age bands up to age 30).
+  ## To avoid having too many edits in too many functions, I decided to leave the "GetDiseaseStateDist" function alone, and as before,
+  # assume fractions in each disease state in the 30-year age band match those in the older age bands, i.e. can just repeat the
+  # final 7 values as needed here to provide proportion estimates up to age 120...so, if limiting to age 70 above, will need to edit this.
+  # EJ 10/23: Change to 9 disease states, allowing for initial vaccination status.  dist_both.csv has those values in it.
+  statefract<-GetDiseaseStateDist(directory=scriptdir, region=myregion)
+  if (length(statefract) < 63) {  
+    initmsg<<-"Incomplete disease state distribution information.  Please check the file dist_both.csv provided with the scripts."
+    return(FALSE)
+  }
+  #expand age group fraction as vector to match pop matrix dimension 1
+  # Chloe edit 3/22/19: changing this to match new dims; see note above.
+  # agefract <- c(rep(as.numeric(mypop[1:6]), each=60), as.numeric(mypop[7]))
+  # Chloe 3/29: In new age bands, all are 5-year except for last, which is 120 years.
+  agefract <- c(rep(as.numeric(mypop[1:20]), each=60), rep(as.numeric(mypop[21]), each=(12*20)+1))
+  # chunks <- c(rep(60, each=360), 1)
+  # Chloe: Looks as though the starting assumption is that population age bands are evenly divided 
+  # among each included age.
+  chunks <- c(rep(60, each=1200), rep((12*20)+1,each=(12*20)+1))
+  
+  # Exanding this to more age brackets.
+  # statemx<-rbind(
+  #  matrix(rep(statefract[1:7], each=60), nrow=60),
+  #  matrix(rep(statefract[8:14], each=60), nrow=60),
+  #  matrix(rep(statefract[15:21], each=60), nrow=60),
+  #  matrix(rep(statefract[22:28], each=60), nrow=60),
+  #  matrix(rep(statefract[29:35], each=60), nrow=60),
+  #  matrix(rep(statefract[36:42], each=60), nrow=60),
+  #  matrix(rep(statefract[43:49], each=1), nrow=1)
+  # )
+  
+  # Assuming last 7 values of statefract (originally just for 30-34 age band) apply to all older ages (which was effectively 
+  # implied before).
+  # Separate matrix for each age chunk,
+  # separate column for disease state, separate row for each month of age.
+  # EJ 10/23: shifting from groups of 7 disease states to 9 disease states
+  statemx<-rbind(
+    matrix(rep(statefract[1:9], each=60), nrow=60),
+    matrix(rep(statefract[10:18], each=60), nrow=60),
+    matrix(rep(statefract[19:27], each=60), nrow=60),
+    matrix(rep(statefract[28:36], each=60), nrow=60),
+    matrix(rep(statefract[37:45], each=60), nrow=60),
+    matrix(rep(statefract[46:54], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=60), nrow=60),
+    matrix(rep(statefract[55:63], each=(12*20)+1), nrow=(12*20)+1)
+  )
+  #initialize - 3rd dimension stays at 1
+  poparray[, "Ns", 1]<-(startSize*agefract/chunks)*statemx[,1]
+  poparray[, "Nc", 1]<-(startSize*agefract/chunks)*statemx[,2]
+  poparray[, "Ls", 1]<-(startSize*agefract/chunks)*statemx[,3]
+  poparray[, "Lc", 1]<-(startSize*agefract/chunks)*statemx[,4]
+  poparray[, "Hs", 1]<-(startSize*agefract/chunks)*statemx[,5]
+  poparray[, "Hc", 1]<-(startSize*agefract/chunks)*statemx[,6]
+  poparray[, "Di", 1]<-(startSize*agefract/chunks)*statemx[,7]
+  poparray[, "Vs", 1]<-(startSize*agefract/chunks)*statemx[,8]
+  poparray[, "Vc", 1]<-(startSize*agefract/chunks)*statemx[,9]
+  #leave Inc 0
+  return(poparray)
+}

@@ -1,34 +1,39 @@
 #### Program information ######################################################
 # Package: MenA_VaccSims                                                      #
-# Source file name: MenA_paramCheck.R                                         #
+# Source file name: fxParamChecks.R                                           #
 # Contact: chris.c.stewart@kp.org, michael.l.jackson@kp.org                   #
-# Version Date 12/31/2018                                                     #
+# Version Date 08/20/2021                                                     #
 #_____________________________________________________________________________#
-# Functions called for validating inputs, called by MenA_VaccSims.R and       #
-# ModelInputUtilities.R                                                       #
-# ALL RETURN TRUE OR (FALSE + MESSAGE) except GetFilename, which returns a    #
-#   filename or (FALSE + MESSAGE)                                             #
-# Contents:                                                                   #
-# -DemogNumVarExists: takes variable name and dataframe, checks to see if     #
+# This program contains a series of custom functions for validating the model #
+# inputs. These functions are called by MenA_VaccSims.R (the top-level)       #
+# program and by functions in fxModelInputs.R.                                #
+# The functions all return either TRUE OR (FALSE + MESSAGE). The exception is #
+# GetFilename, which returns a filename or (FALSE + MESSAGE)                  #
+#_____________________________________________________________________________#
+# Functions in this program:                                                  #
+# 1) DemogNumVarExists: takes variable name and dataframe, checks to see if   #
 #   variable exists in dataframe and that it is numeric                       #
-# -GetFilename: takes directory path and pattern (part of file name.)         #
+# 2) GetFilename: takes directory path and pattern (part of file name.)       #
 #   Makes sure a file is found and can be read with read.csv                  #
-# -IsCountryAndColAvailable: takes country code and dataframe, makes sure df  #
+# 3) IsCountryAndColAvailable: takes country code and dataframe, makes sure df#
 #   contains country_code variable and data for requested country is present  #
 #   if forVacc=1 is specified, also checks for target variable, which is not  #
 #   currently numeric in source data                                          #
-# -CheckDemogFileStructure: takes country, dataframe, and description         #
+# 4) CheckDemogFileStructure: takes country, dataframe, and description       #
 #   (which file, for error message only.)  Calls IsCountryandColAvailable     # 
 #    makes sure numeric year and value variables are present.                 #
-# -CheckDemogParamaters: input is output of GetDemogParameters (dataframe)    #
+# 5) CheckDemogParamaters: input is output of GetDemogParameters (dataframe)  #
 #   makes sure all variables are present and means are non-zero               # 
-# -CheckSetParamaters: input is a list of parameters set by user in calling   #
+# 6) CheckSetParamaters: input is a list of parameters set by user in calling #
 #   script. Validates input: some are limited to specific values, others      #
 #   must be numeric, directories must be valid path.                          #
 #_____________________________________________________________________________#
+# These functions were written by Chris Stewart, with some editing by Mike    #
+# Jackson                                                                     #
+#_____________________________________________________________________________#
 
-DemogNumVarExists<-function(varname, mydf) {
-  colix<-grep(varname, colnames(mydf))
+DemogNumVarExists <- function(varname, mydf) {
+  colix <- grep(varname, colnames(mydf))
   if (length(colix > 0)) {
     if (is.numeric(mydf[,colix])) {
       return(TRUE)
@@ -43,8 +48,8 @@ DemogNumVarExists<-function(varname, mydf) {
   return(TRUE)
 }
 
-IsCountryAndColAvailable<-function(country_code, mydf, forVacc=0) {
-  #make sure requested country is in data, and required columns are present
+IsCountryAndColAvailable <- function(country_code, mydf, forVacc=0) {
+  # Make sure requested country is in data, and required columns are present
   countrymsg<<-""
   if ("country_code" %in% colnames(mydf)==FALSE) {
     countrymsg<<-"country_code variable not found in input data:"
@@ -65,19 +70,19 @@ IsCountryAndColAvailable<-function(country_code, mydf, forVacc=0) {
   return(TRUE)
 }
 
-GetFilename<-function(path, pattern, subpattern="NA") {
+GetFilename <- function(path, pattern, subpattern="NA") {
   mymsg<<-""
   setwd(path)
-  flist<-list.files(path)
-  myfile<-flist[grepl(pattern,flist)==TRUE]
+  flist <- list.files(path)
+  myfile <- flist[grepl(pattern,flist)==TRUE]
   if (length(myfile)==0) { 
     mymsg<<-paste("No file found for ", pattern)
     return(FALSE)
   }
   if (subpattern != "NA") {  #code to allow selection between bestcase and default vaccination scenarios
-    myfile<-myfile[grepl(subpattern,myfile)==TRUE]
+    myfile <- myfile[grepl(subpattern,myfile)==TRUE]
   }
-  e<-try(read.csv(myfile[1]))
+  e <- try(read.csv(myfile[1]))
   if (class(e) == "try-error" || is.na(e)) { 
     mymsg<<-paste0(myfile[1], " is not a .csv file")
     return(FALSE)
@@ -85,7 +90,7 @@ GetFilename<-function(path, pattern, subpattern="NA") {
   return(myfile[1])
 }
 
-CheckDemogFileStructure<-function(mycountry, mydf, dfdesc){
+CheckDemogFileStructure <- function(mycountry, mydf, dfdesc){
   filemsg<<-""
   #just a wrapper/shortcut for 3 function calls
   if (IsCountryAndColAvailable(mycountry, mydf)==FALSE) {
@@ -103,7 +108,7 @@ CheckDemogFileStructure<-function(mycountry, mydf, dfdesc){
   return(TRUE)
 }
 
-CheckDemogParameters<-function(params) {
+CheckDemogParameters <- function(params) {
   dpmessage<<-""
   if (is.data.frame(params)) {
     if (nrow(params)==0) {

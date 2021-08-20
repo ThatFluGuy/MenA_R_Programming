@@ -87,24 +87,24 @@ phi<-0.2  # Set stochastic parameter
 
 # (B) Import scripts
 if (dir.exists(script.dir)) {
-  if (file.exists(paste0(script.dir, "/","MenA_paramCheck.R"))==FALSE) {
-    msg<(paste0("MenA_paramcheck.R not found in ", script.dir))
+  if (file.exists(paste0(script.dir, "/","fxParamChecks.R"))==FALSE) {
+    msg<-(paste0("MenA_paramcheck.R not found in ", script.dir))
     stop(msg)
   }
 } else {
   script.dir<- getSrcDirectory(function(dummy) {dummy})
-  if (file.exists(paste0(script.dir, "/","MenA_paramCheck.R"))==FALSE) {
+  if (file.exists(paste0(script.dir, "/","fxParamChecks.R"))==FALSE) {
     print(paste0("MenA_paramCheck.R not found in ", script.dir))
     stop("This script requires 6 other scripts; please put in same directory as this one or specify script directory.")
   }
 }
 
 setwd(script.dir)
-source("MenA_paramCheck.R")
-source("ModelInputUtilities.R")
+source("fxParamChecks.R")
+source("fxModelInputs.R")
 source("MenA_OneSim.R")
-source("MenA_helper_functions.R")
-source("MenA_summarization_functions.R")
+source("fxSimulationSubFunctions.R")
+source("fxSummarization.R")
 
 # Variables and functions to keep between iterations when automate==TRUE
 keep.v <- c("automate", "input.dir", "output.dir", "deliv.dir", "script.dir", "scenario_tracker",
@@ -241,8 +241,8 @@ if (scenario.loops >= 1){
     
     # (B) Output summary results for the country/scenario set
     filename <- paste0(mycountry, "_", vacc_program, "_", vacc_subprogram, "_", Sys.Date(), ".csv")
-    filename1<- paste0(output.dir, "/", filename)
-    finalsummary<-summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
+    filename1 <- paste0(output.dir, "/", filename)
+    finalsummary <- summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
     
     
     # (C) Output PSA results if needed
