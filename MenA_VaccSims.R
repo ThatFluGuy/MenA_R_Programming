@@ -29,7 +29,7 @@
 
 automate <- TRUE
 
-### (1) Set up libraries and directoreis ######################################
+### (1) Set up libraries and directories ######################################
 
 library(lubridate)
 library(doParallel)
@@ -39,7 +39,7 @@ library(reshape2)
 library(tidyr)
 
 # Directory containing inputs from https://montagu.vaccineimpact.org/
-input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/2019_12_gavi_v3"
+input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/202108_test"
 # Directory for central simulation outputs
 output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/Simulation results"
 # Directory for final PSA outputs
@@ -105,7 +105,7 @@ source("fxModelInputs.R")
 source("MenA_OneSim.R")
 source("fxSimulationSubFunctions.R")
 source("fxSummarization.R")
-source("fxCompileCWXY")
+source("fxCompileCWXY.R")
 
 # Variables and functions to keep between iterations when automate==TRUE
 keep.v <- c("automate", "input.dir", "output.dir", "deliv.dir", "script.dir", "scenario_tracker",
@@ -242,7 +242,7 @@ if (scenario.loops >= 1){
     }
     
     # (B) Get results for CWXY
-    cwxy.l <- compileCWXY(cwxy.country=mycountry.top)
+    cwxy.l <- compileCWXY(cwxy.country=mycountry)
     
     # (C) Output summary results for the country/scenario set
     filename <- paste0(mycountry, "_", vacc_program, "_", vacc_subprogram, "_", Sys.Date(), ".csv")

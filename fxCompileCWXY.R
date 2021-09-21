@@ -32,7 +32,7 @@ compileCWXY <- function(cwxy.country, cwxy.cohortSize=cohortSize,
   # Within the age blocks given by the CWXY simulation output, distribute the   #
   # case counts according to population size.                                   #
   
-  cwxy.df <- read.csv(paste0(path.cwxy, "/MenCWXY_Sims_", country, ".csv"), 
+  cwxy.df <- read.csv(paste0(cwxy.path, "/MenCWXY_Sims_", cwxy.country, ".csv"), 
                         stringsAsFactors = FALSE)
     
     
