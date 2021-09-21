@@ -105,6 +105,7 @@ source("fxModelInputs.R")
 source("MenA_OneSim.R")
 source("fxSimulationSubFunctions.R")
 source("fxSummarization.R")
+source("fxCompileCWXY")
 
 # Variables and functions to keep between iterations when automate==TRUE
 keep.v <- c("automate", "input.dir", "output.dir", "deliv.dir", "script.dir", "scenario_tracker",
@@ -231,21 +232,25 @@ if (scenario.loops >= 1){
     # (A) Detail output for testing if needed
     detail<-1
     if (use.tensims==TRUE) {
-      tensims<-rbindlist(my_data[1:10])
-      tensimsum<-tensims%>%group_by(simulation, IterYear)%>%summarize(sumCases=sum(Cases))
-      sfile = paste0(mycountry, "_tensims_", vacc_program, "_", Sys.Date(), ".csv")
-      detfile<-paste0(output.dir, "/", sfile)
+      tensims <- rbindlist(my_data[1:10])
+      tensimsum <- tensims %>% group_by(simulation, IterYear) %>% 
+        summarize(sumCases=sum(Cases))
+      sfile <- paste0(mycountry, "_tensims_", vacc_program, "_", Sys.Date(), ".csv")
+      detfile <- paste0(output.dir, "/", sfile)
       write.csv(tensimsum, detfile)
       print(paste("Simulation detail written to", detfile))
     }
     
-    # (B) Output summary results for the country/scenario set
+    # (B) Get results for CWXY
+    cwxy.l <- compileCWXY(cwxy.country=mycountry.top)
+    
+    # (C) Output summary results for the country/scenario set
     filename <- paste0(mycountry, "_", vacc_program, "_", vacc_subprogram, "_", Sys.Date(), ".csv")
     filename1 <- paste0(output.dir, "/", filename)
     finalsummary <- summarizeForOutput(my_data, cohort=cohortSize, write=TRUE, filename=filename1)
     
     
-    # (C) Output PSA results if needed
+    # (D) Output PSA results if needed
     if (PSA==TRUE){
       names.df <- data.frame(
         country_code=c("BDI", "BEN", "BFA", "CAF", "CIV", "CMR", "COD", "ERI", "ETH", "GHA", "GIN", "GMB",
@@ -283,6 +288,9 @@ if (scenario.loops >= 1){
       psa.output$disease <- rep("MenA", times=records)
       psa.output$country <- rep(mycountry, times=records)
       psa.output$country_name <- rep(names.df$country[names.df$country_code==mycountry], times=records)
+      
+      # Merge in CWXY results
+      psa.output <- left_join(psa.output, cwxy.l[[2]], by=c("run_id", "year", "age"))
       
       write.csv(psa.output, filename.psa1, row.names=FALSE)
       print(paste("Simulation detail written to", filename.psa1))
