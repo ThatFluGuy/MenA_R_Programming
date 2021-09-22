@@ -306,7 +306,7 @@ destring <- function(x,keep="0-9.-") {
 }
 
 GetVaccScenario <- function(mycountry, scenario, sub.scenario, directory) { #sub.scenario allows for selection between bestcase and default vaccination scenario files
-  vaccmsg<<-""
+  vaccmsg <<- ""
   setwd(directory)
   if (scenario=="none") sub.scenario <- "NA"  #can't have a sub-scenario when there's no vaccinations
   if (scenario=="routine" | scenario=="both") {
@@ -315,18 +315,35 @@ GetVaccScenario <- function(mycountry, scenario, sub.scenario, directory) { #sub
   if (scenario=="campaign") {
     filename <- GetFilename(directory, "mena-campaign", sub.scenario)
   }
+  if (scenario=="booster") {
+    filename <- GetFilename(directory, "mena-booster", sub.scenario)
+  }
   if (is.character(filename)==FALSE) { stop(mymsg) }
+  
   dfvacc <- read.csv(filename, stringsAsFactors = FALSE)
   if (IsCountryAndColAvailable(country_code=mycountry,mydf=dfvacc, forVacc=1)==FALSE) { stop(countrymsg) }
-  #target and year validated above.  Do we need AgeLimCampaign? No its not used.
-  if (scenario=="routine" || scenario=="both") {
+  
+  # Target and year validated above
+  if (scenario %in% c("routine", "both", "booster")){
       if (!(DemogNumVarExists("coverage", dfvacc))) { 
         vaccmsg<<-"coverage variable missing from vaccination file"
         return(FALSE) 
         }
   }
-  ctryvacc <- dfvacc[dfvacc$country_code==mycountry, c("country_code", "year", "activity_type", "target" , "coverage")]
+  
+  # Drop the records for ACWXY vaccination (these are handled separately)
+  dfvacc <- dfvacc[dfvacc$vaccine=="MenA",]
+  
+  # Select needed variables
+  ctryvacc <- dfvacc[dfvacc$country_code==mycountry, 
+                     c("country_code", "year", "activity_type", "target" , "coverage",
+                       "age_first", "age_last")]
   colnames(ctryvacc)[colnames(ctryvacc)=="coverage"] <-"CoverRoutine"
+  
+  # Convert ages to months (only needed for campaigns)
+  ctryvacc$age_first <- ctryvacc$age_first*12
+  ctryvacc$age_last <- ctryvacc$age_last*12 + 11
+  
   ##target has "<NA>" where activity type = routine, hosing conversion
   #still getting coercion warning
   #getting this even though not strictly required by routine option

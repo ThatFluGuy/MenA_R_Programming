@@ -56,33 +56,36 @@ GetInfectiveRatio<-function(inpop){
 #_____________________________________________________________________________#
 
 vaccinate<-function(popslice, vlookup, type, mydate, params) { 
-  #for type="both", both ifs should execute
+
+  # For type="both", both ifs should execute
   eligibles.s <- c("Ns", "Ls", "Hs")
   eligibles.c <- c("Nc", "Lc", "Hc")
-  if ((type=="campaign" | type=="both") & (month(mydate)==10)) {
-    #get parameters
+  if ((type %in% c("campaign", "both", "booster")) & (month(mydate)==10)) {
+    # Get parameters
     cDoses <- vlookup[vlookup$year==year(mydate) & vlookup$activity_type=="campaign","DosesCampaign"]
-    #zero-length cDoses (not NA, apparently) is blowing things up
+    # Zero-length cDoses (not NA, apparently) is blowing things up
     if (length(cDoses)> 0) {
       if (!is.na(cDoses)) {
-       # print(cDoses)
+        # print(cDoses)
         #change ages i=12 to 359, here 13 to 360
         #EJ 10/23: separating out susceptibles and colonized, adding vaccine effectiveness 
-        eligN.s <- sum(popslice[13:360, eligibles.s])
-        eligN.c <- sum(popslice[13:360, eligibles.c]) 
+        min.age <- vlookup$age_first[vlookup$year==year(mydate) & vlookup$activity_type=="campaign"]
+        max.age <- vlookup$age_last[vlookup$year==year(mydate) & vlookup$activity_type=="campaign"]
+        eligN.s <- sum(popslice[min.age:max.age, eligibles.s])
+        eligN.c <- sum(popslice[min.age:max.age, eligibles.c]) 
         pcNLH <- ifelse(cDoses<=(eligN.s + eligN.c), cDoses/(eligN.s + eligN.c), 1 )
         #why do the above if were not going to move anybody?  EJ: it allows for fractional vaccination of the eligible population, if there aren't enough doses available.
         #formula change, example:
         #100 people in eligible, 50% pcNLH, 90% ve.  100*.5*.9 = 45 vaccinated
         #100*(1 - .9*.5) = 100*(1-.45)=55 people remain at risk.  
-        popslice[13:360,"Vs"] <- popslice[13:360,"Vs"] + params$ve * pcNLH * rowSums(popslice[13:360,eligibles.s])
-        popslice[13:360,eligibles.s] <- (1 - params$ve * pcNLH) * popslice[13:360, eligibles.s]
-        popslice[13:360,"Vc"] <- popslice[13:360,"Vc"] + params$ve * pcNLH * rowSums(popslice[13:360,eligibles.c])
-        popslice[13:360,eligibles.c] <- (1 - params$ve * pcNLH) * popslice[13:360, eligibles.c]
+        popslice[min.age:max.age,"Vs"] <- popslice[min.age:max.age,"Vs"] + params$ve * pcNLH * rowSums(popslice[min.age:max.age,eligibles.s])
+        popslice[min.age:max.age,eligibles.s] <- (1 - params$ve * pcNLH) * popslice[min.age:max.age, eligibles.s]
+        popslice[min.age:max.age,"Vc"] <- popslice[min.age:max.age,"Vc"] + params$ve * pcNLH * rowSums(popslice[min.age:max.age,eligibles.c])
+        popslice[min.age:max.age,eligibles.c] <- (1 - params$ve * pcNLH) * popslice[min.age:max.age, eligibles.c]
               }
     }
   }
-  if (type=="routine" | type=="both") {
+  if (type %in% c("routine", "both", "booster")) {
     pr <- vlookup[vlookup$year==year(mydate) & vlookup$activity_type=="routine","CoverRoutine"]
     # print(pr)
     if (length(pr)> 0) if(pr>0) {

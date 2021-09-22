@@ -238,8 +238,8 @@ CheckSetParameters<-function(setparams) {
     spmessage<<-"myregion must be set to either hyper or not_hyper."
     return(FALSE)
   }
-  if (!(setparams$vacc_program %in% c("campaign", "routine", "both", "none"))) {
-    spmessage<<-"Valid values for vacc_program are campaign, routine, both, or none."
+  if (!(setparams$vacc_program %in% c("campaign", "routine", "both", "booster", "none"))) {
+    spmessage<<-"Valid values for vacc_program are campaign, routine, both, booster, or none."
     return(FALSE)
   }
   #start and end must be dates, end>start
