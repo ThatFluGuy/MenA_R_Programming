@@ -22,9 +22,11 @@
 #_____________________________________________________________________________#
 
 compileCWXY <- function(cwxy.country, cwxy.cohortSize=cohortSize, 
-                        cwxy.lifeEx=my.lifex,
+                        cwxy.lifeEx=my.lifex, cwxy.scenario=vacc_program,
+                        cwxy.sub.scenario=vacc_subprogram,
                         cwxy.cfr=paramfixed %>% select(run_id, cfr1, cfr2, cfr3, cfr4, cfr5, cfr6),
-                        cwxy.path="G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/ACWXY"){
+                        cwxy.path="G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/ACWXY",
+                        cwxy.vacc.path=input.dir){
   
   ### (1) Import data, convert to cases by year of age ##########################
   # If using PSA, do this separately for each iteration. If not, average across #
@@ -69,7 +71,59 @@ compileCWXY <- function(cwxy.country, cwxy.cohortSize=cohortSize,
   cohortGroup <- cohortGroup %>% select(index, year, AgeInYears, Cases) %>%
     arrange(index, year, AgeInYears)
   
-  ### (2) Add CFR and life expectancy to get deaths and DALYS ###################
+  
+  ### (2) Implement vaccination, if any #######################################
+  # Assume protection is fully effective for 10 years and then absent         #
+  
+  if (cwxy.scenario=="booster"){
+    filename <- GetFilename(directory, "mena-booster", sub.scenario)
+    if (is.character(filename)==FALSE) { stop(mymsg) }
+    
+    dfvacc <- read.csv(filename, stringsAsFactors = FALSE)
+    if (IsCountryAndColAvailable(country_code=cwxy.country, mydf=dfvacc, forVacc=1)==FALSE) {
+      stop(countrymsg) 
+    }
+    
+    # Restrict to ACWXY entries
+    dfvacc <- dfvacc[dfvacc$vaccine!="MenA",]
+    
+    # Restrict to modeled country
+    dfvacc <- dfvacc[dfvacc$country_code==cwxy.country,]
+    
+    # Expand to coverage by year and age group
+    cwxy.vacc <- data.frame(year=numeric(0), AgeInYears=numeric(0), coverage=numeric(0))
+    for(y in unique(dfvacc$year)){
+      # Create a dataframe for the modeled year
+      temp.df <- dfvacc %>% filter(year==y) %>% 
+        select(year, age_first, age_last, coverage)
+      age.length <- temp.df$age_last - temp.df$age_first + 1
+      temp.df2 <- data.frame(year = rep(y, times=age.length), 
+                             AgeInYears = seq(temp.df$age_first, temp.df$age_last, 1),
+                             coverage = rep(temp.df$coverage, times=age.length))
+      
+      cwxy.vacc <- rbind(cwxy.vacc, temp.df2)
+      # Make the next nine years
+      for (x in 1:9){
+        temp.df2 <- temp.df2 + 1
+        cwxy.vacc <- rbind(cwxy.vacc, temp.df2)
+      }
+      rm(temp.df, temp.df2)
+    }
+    rm(filename, dfvacc)
+    
+    # Convert coverage to effective coverage, assuming 95% VE
+    cwxy.vacc$coverage <- cwxy.vacc$coverage * 0.95
+    
+    # Merge into full data
+    cohortGroup <- left_join(cohortGroup, cwxy.vacc, by=c("year", "AgeInYears"))
+    cohortGroup$coverage[is.na(cohortGroup$coverage)==TRUE] <- 0
+    cohortGroup$Cases <- cohortGroup$Cases * (1 - cohortGroup$coverage)
+    
+    cohortGroup <- cohortGroup %>% select(-coverage)
+  }
+  
+  
+  ### (3) Add CFR and life expectancy to get deaths and DALYS ###################
   
   cwxy.cfr <- cwxy.cfr %>% rename(index=run_id)
   
@@ -91,7 +145,7 @@ compileCWXY <- function(cwxy.country, cwxy.cohortSize=cohortSize,
     (daly.df$Cases - daly.df$Deaths) * (0.26 * 0.072) * daly.df$Life.Ex
   
   
-  ### (3) Compile output ######################################################
+  ### (4) Compile output ######################################################
   
   # Aggregated across iterations
   final.df1 <- aggregate(cbind(Cases, Deaths, DALYs)~year+AgeInYears, data=daly.df,
