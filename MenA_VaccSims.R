@@ -105,7 +105,7 @@ source("fxModelInputs.R")
 source("MenA_OneSim.R")
 source("fxSimulationSubFunctions.R")
 source("fxSummarization.R")
-source("fxCompileCWXY.R")
+source("fxCompileCWYX.R")
 
 # Variables and functions to keep between iterations when automate==TRUE
 keep.v <- c("automate", "input.dir", "output.dir", "deliv.dir", "script.dir", "scenario_tracker",
@@ -289,8 +289,8 @@ if (scenario.loops >= 1){
       psa.output$country <- rep(mycountry, times=records)
       psa.output$country_name <- rep(names.df$country[names.df$country_code==mycountry], times=records)
       
-      # Merge in CWXY results
-      psa.output <- left_join(psa.output, cwxy.l[[2]], by=c("run_id", "year", "age"))
+      # Merge in CWYX results
+      psa.output <- left_join(psa.output, cwyx.l[[2]], by=c("run_id", "year", "age"))
       
       write.csv(psa.output, filename.psa1, row.names=FALSE)
       print(paste("Simulation detail written to", filename.psa1))

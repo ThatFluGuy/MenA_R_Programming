@@ -89,7 +89,7 @@ summarizeOneSim <- function(poparray, sim.number=n, cfr.v=cfr, le.df=my.lifex) {
 
 ### (3) Average results across sims ###########################################
 
-summarizeForOutput <- function(results_list, cohort, write, filename, cwxy=cwxy.l[[1]]) {
+summarizeForOutput <- function(results_list, cohort, write, filename, cwyx=cwyx.l[[1]]) {
   if (length(results_list) > 1) {
     allsims <- rbindlist(results_list)
     simmeans <- allsims %>% 
@@ -106,9 +106,9 @@ summarizeForOutput <- function(results_list, cohort, write, filename, cwxy=cwxy.
     simsummary$simulations<-1
   }
   
-  # Merge in cohort size and CWXY results
+  # Merge in cohort size and CWYX results
   finalsummary <- merge(x = simsummary, y = cohort, by = c("year", "AgeInYears"))
-  finalsummary <- left_join(x=finalsummary, y=cwxy, by = c("year", "AgeInYears")) %>%
+  finalsummary <- left_join(x=finalsummary, y=cwyx, by = c("year", "AgeInYears")) %>%
     arrange(year, AgeInYears)
   
   if (write==TRUE){
