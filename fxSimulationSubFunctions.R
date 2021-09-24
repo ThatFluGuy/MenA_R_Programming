@@ -60,7 +60,7 @@ vaccinate<-function(popslice, vlookup, type, mydate, params) {
   # For type="both", both ifs should execute
   eligibles.s <- c("Ns", "Ls", "Hs")
   eligibles.c <- c("Nc", "Lc", "Hc")
-  if ((type %in% c("campaign", "both", "booster")) & (month(mydate)==10)) {
+  if ((month(mydate)==10)) { # Run campaigns (if any) during October only
     # Get parameters
     cDoses <- vlookup[vlookup$year==year(mydate) & vlookup$activity_type=="campaign","DosesCampaign"]
     # Zero-length cDoses (not NA, apparently) is blowing things up
@@ -85,7 +85,8 @@ vaccinate<-function(popslice, vlookup, type, mydate, params) {
               }
     }
   }
-  if (type %in% c("routine", "both", "booster")) {
+  
+  if (type %in% c("routine", "both", "booster")) { # Don't run for campaign-only scenarios
     pr <- vlookup[vlookup$year==year(mydate) & vlookup$activity_type=="routine","CoverRoutine"]
     # print(pr)
     if (length(pr)> 0) if(pr>0) {

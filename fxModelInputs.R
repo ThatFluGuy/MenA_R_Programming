@@ -323,7 +323,9 @@ GetVaccScenario <- function(mycountry, scenario, sub.scenario, directory) { #sub
   if (is.character(filename)==FALSE) { stop(mymsg) }
   
   dfvacc <- read.csv(filename, stringsAsFactors = FALSE)
-  if (IsCountryAndColAvailable(country_code=mycountry,mydf=dfvacc, forVacc=1)==FALSE) { stop(countrymsg) }
+  if (IsCountryAndColAvailable(country_code=mycountry,mydf=dfvacc, forVacc=1)==FALSE) {
+    stop(countrymsg) 
+  }
   
   # Target and year validated above
   if (scenario %in% c("routine", "both", "booster")){
