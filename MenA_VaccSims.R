@@ -39,7 +39,7 @@ library(reshape2)
 library(tidyr)
 
 # Directory containing inputs from https://montagu.vaccineimpact.org/
-input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/202108_test"
+input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/202110gavi_v1"
 # Directory for central simulation outputs
 output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/Simulation results"
 # Directory for final PSA outputs
@@ -69,8 +69,8 @@ if (automate==TRUE){
   scenario.loops <- 1 # Just do one loop when not using automate
   mycountry.top <- "NGA"
   myregion.top <- "hyper"  #"hyper" or "not_hyper"
-  vacc_program.top <- "campaign" ## "campaign" or "routine" or "both" or "none"
-  vacc_subprogram.top <- "default"  ## "default" or "bestcase" are allowable options in 2019v3
+  vacc_program.top <- "campaign" ## "campaign" or "routine" or "both" or "none" or "booster"
+  vacc_subprogram.top <- "default"  ## "default" or "ia2030_target" are allowable options in 2021v1
 }
 
 ### (3) Set up cross-scenario options #########################################
@@ -102,7 +102,7 @@ if (dir.exists(script.dir)) {
 setwd(script.dir)
 source("fxParamChecks.R")
 source("fxModelInputs.R")
-source("MenA_OneSim.R")
+source("fxMenASimulation.R")
 source("fxSimulationSubFunctions.R")
 source("fxSummarization.R")
 source("fxCompileCWYX.R")
