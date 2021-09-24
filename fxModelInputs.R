@@ -17,8 +17,10 @@
 # (6) GetDiseaseStateDist                                                     #
 # (7) GetWAIFWmatrix                                                          #
 # (8) GetModelParams                                                          #
-# (9) GetLifeEx                                                               # 
-# (1) InitializePopulation
+# (9) GetLifeEx                                                               #
+# (10) GetModelPct                                                            #
+# (11) combineOutputFiles                                                     #
+# (12) InitializePopulation                                                   #
 #_____________________________________________________________________________#
 # Parameters:                                                                 #
 # Start and end dates of simulation - to be specified in calling program      #
@@ -522,9 +524,8 @@ GetModelPct <- function(path=input.dir, mycountry.s=mycountry){
 # file to the output directory.                                               #       
 
 combineOutputFiles <- function(path=output.dir, vacc_program="none",
-                               vacc_subprogram="default",
-                               deliv.path="G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2019"
-                               ){
+                               vacc_subprogram="default", deliv.path,
+                               touchstone){
 
   # Inputs
   # path            - character scalar indicating location of output files
@@ -539,8 +540,8 @@ combineOutputFiles <- function(path=output.dir, vacc_program="none",
   if (!dir.exists(path)) {
     stop(paste(path, "is not a valid directory", sep=" "))
   }
-  if (!(vacc_program %in% c("none", "campaign", "routine", "both"))){
-    stop("vacc_progam must be one of 'none', 'campaign', 'routine', or 'both'")
+  if (!(vacc_program %in% c("none", "campaign", "routine", "both", "booster"))){
+    stop("vacc_progam must be one of 'none', 'campaign', 'routine', 'booster' or 'both'")
   }
   if (!(vacc_subprogram %in% c("default", "bestcase"))){
     stop("vacc_subprogram must be one of 'default', 'bestcase'")
@@ -562,11 +563,16 @@ combineOutputFiles <- function(path=output.dir, vacc_program="none",
   
   oldnames=c("AgeInYears", "Cases", "Deaths", "DALYs", "cohortsize")
   newnames=c("age", "cases", "deaths", "dalys", "cohort_size")
+  keepnames=c("disease",	"year", "age", "country", "country_name", "cohort_size",
+              "cases", "dalys", "deaths", "cases_cwyx", "deaths_cwyx", "dalys_cwyx")
+
 
   output.df <- data.frame(disease=character(0), year=numeric(0), age=numeric(0),
                           country=character(0), country_name=character(0),
                           cohort_size=numeric(0), cases=numeric(0),
-                          dalys=numeric(0), deaths=numeric(0), stringsAsFactors = FALSE)
+                          dalys=numeric(0), deaths=numeric(0), cases_cwyx=numeric(0),
+                          deaths_cwyx=numeric(0), dalys_cwyx=numeric(0), 
+                          stringsAsFactors = FALSE)
 
   # (C) Get list of all relevant output files and cycle through each
   # Read the file in, verify size, rename variables, and bind rows to output
@@ -589,14 +595,14 @@ combineOutputFiles <- function(path=output.dir, vacc_program="none",
     result.df <- result.df %>%
       rename_at(vars(oldnames), ~newnames)
     
-    output.df <- bind_rows(output.df, result.df[, names(output.df)])
+    output.df <- bind_rows(output.df, result.df[, keepnames])
   }
 
   if(vacc_program=="none"){
-    filename <- paste(deliv.path, "/mena-no-vaccination-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
+    filename <- paste(deliv.path, "/mena-no-vaccination-", touchstone, ".MenA_KPW-Jackson.csv", sep="")
   } else {
-   filename <- paste(deliv.path, "/mena-", vacc_program, "-", vacc_subprogram,
-                    "-201910gavi-3.MenA_KPW-Jackson.csv", sep="")
+   filename <- paste(deliv.path, "/mena-", vacc_program, "-", vacc_subprogram, "-", 
+                    touchstone, ".MenA_KPW-Jackson.csv", sep="")
   }
   
   # (D) Output to the appropriate directory, with error-handling

@@ -43,7 +43,7 @@ input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/
 # Directory for central simulation outputs
 output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/Simulation results"
 # Directory for final PSA outputs
-deliv.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2019"
+deliv.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2021"
 # Directory containing R scripts
 script.dir <- "C:/Users/O992928/documents/GAVI MenA predictions/R_programming"
 
@@ -241,8 +241,8 @@ if (scenario.loops >= 1){
       print(paste("Simulation detail written to", detfile))
     }
     
-    # (B) Get results for CWXY
-    cwxy.l <- compileCWXY(cwxy.country=mycountry)
+    # (B) Get results for CWYX
+    cwyx.l <- compileCWYX(cwyx.country=mycountry)
     
     # (C) Output summary results for the country/scenario set
     filename <- paste0(mycountry, "_", vacc_program, "_", vacc_subprogram, "_", Sys.Date(), ".csv")

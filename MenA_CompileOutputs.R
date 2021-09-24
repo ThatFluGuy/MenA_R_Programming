@@ -13,12 +13,10 @@
 # PSA, renamed files.                                                         #
 #_____________________________________________________________________________#
 # Steps in this program:                                                      #
+# (1) Set up options, get functions                                           #
+# (2) Compile central estimates                                               #
 #_____________________________________________________________________________#
 # Author: Mike Jackson;  michael.l.jackson@kp.org                             #
-#_____________________________________________________________________________#
-# FLAG FOR FUTURE WORK: Fix MenA_VaccSims.R so that row.names are not output  #
-# for PSA, and so that names are in VIMC suggested format. Then the PSA part  #
-# of this program will not be necessary.                                      #
 #_____________________________________________________________________________#
 
 ### (1) Set up options, get functions #########################################
@@ -26,60 +24,24 @@
 library(dplyr)
 
 output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/Simulation results"
-deliv.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2019"
+deliv.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2021"
 script.dir <- "C:/Users/O992928/documents/GAVI MenA predictions/R_programming"
 
 setwd(script.dir)
-source("ModelInputUtilities.R")
+source("fxModelInputs.R")
 
 ### (2) Compile central estimates #############################################
 combineOutputFiles(path=output.dir, vacc_program="none", 
-                   vacc_subprogram="default", deliv.path=deliv.dir)
+                   vacc_subprogram="default", deliv.path=deliv.dir, touchstone="202108")
 
-combineOutputFiles(path=output.dir, vacc_program="campaign", 
-                   vacc_subprogram="default", deliv.path=deliv.dir)
+combineOutputFiles(path=output.dir, vacc_program="routine", 
+                   vacc_subprogram="default", deliv.path=deliv.dir, touchstone="202108")
 
-combineOutputFiles(path=output.dir, vacc_program="campaign", 
-                   vacc_subprogram="bestcase", deliv.path=deliv.dir)
-
-combineOutputFiles(path=output.dir, vacc_program="both", 
-                   vacc_subprogram="default", deliv.path=deliv.dir)
-
-combineOutputFiles(path=output.dir, vacc_program="both", 
-                   vacc_subprogram="bestcase", deliv.path=deliv.dir)
+combineOutputFiles(path=output.dir, vacc_program="booster", 
+                   vacc_subprogram="default", deliv.path=deliv.dir, touchstone="202108")
 
 
-### (3) Clean up PSA files ####################################################
-# Need to rename according to VIMC's preferred convention. Also delete the    #
-# column "x" that contains row numbers.                                       #
 
-var.names <- c("disease", "run_id", "year", "age", "country", "country_name",
-               "cohort_size",	"cases", "dalys", "deaths")
 
-# (A) Get names of PSA files in output.dir
-files.v <- list.files(output.dir, pattern="PSA_")
-
-# (B) Pull out country and vaccine program codes
-country_code.v <- sapply(strsplit(files.v, split="_"), '[', 2)
-vacc_program.v <- sapply(strsplit(files.v, split="_"), '[', 3)
-vacc_subprogram.v <- sapply(strsplit(files.v, split="_"), '[', 4)
-vacc.v <- paste(vacc_program.v, vacc_subprogram.v, sep="_")
-
-# (C) Index scenario files by country and create new names
-country_num.v <- match(country_code.v, unique(country_code.v))
-
-new.files.v <- paste("stochastic_burden_est_MenA_KPWA_", vacc.v, "_", 
-                     country_num.v, ".csv", sep="")
-  
-for (f in 1:length(files.v)){
-  print(paste("Processing file #", f, files.v[f], sep=" "))
-  temp.df <- read.csv(paste(output.dir, files.v[f], sep="/"),
-                      stringsAsFactors = FALSE)
-  write.csv(x=temp.df[, names(temp.df) %in% var.names], 
-            file=paste(deliv.dir, new.files.v[f], sep="/"),
-            row.names=FALSE)
-  rm(temp.df)
-  gc()
-}
 
 

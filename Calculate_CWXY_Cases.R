@@ -7,16 +7,14 @@ library(dplyr)
 glm.nb <- MASS::glm.nb
 rnegbin <- MASS::rnegbin
 
-library(MASS)
-
-cwxy.path <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/ACWXY"
+cwyx.path <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/ACWXY"
 pop.path <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/201910gavi_v4"
 
 ### (1) Import the raw data and fit the model #################################
 # Exclude countries with <8 annual datapoints from the model.                 #
 # Drop ETH, GMB, GIN, MRT, SSD, SDN, UGA on this basis.                       #
 
-nona <- read.csv(paste0(cwxy.path, "/WHO Bulletin data.csv"),
+nona <- read.csv(paste0(cwyx.path, "/WHO Bulletin data.csv"),
                  stringsAsFactors = FALSE)
 
 nona2 <- nona %>% filter(!(Country %in% c("ETH", "GMB", "GIN", "MRT", "SSD", "SDN", "UGA")))
@@ -97,7 +95,7 @@ output.df <- pred.df %>%
 
 for (c in unique(output.df$Country)){
   temp.df <- output.df %>% filter(Country==c)
-  write.csv(temp.df, paste0(cwxy.path, "/MenCWXY_Sims_", c, ".csv"), row.names=FALSE)
+  write.csv(temp.df, paste0(cwyx.path, "/MenCWYX_Sims_", c, ".csv"), row.names=FALSE)
 }
 
 
