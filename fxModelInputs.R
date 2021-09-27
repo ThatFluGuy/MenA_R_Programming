@@ -419,7 +419,7 @@ GetModelParams<-function(path=scripts.dir, region.val,
   }
   
   setwd(path)
-  param.file <- GetFilename(path, "posterior_parameters.csv")
+  param.file <- GetFilename(path, "posterior_parameters_ConstantFOI.csv")
   if (is.character(param.file)==FALSE) { 
     stop(mymsg) 
     print("File [posterior_parameters.csv] is packaged with the R scripts and should be in the same directory.")
