@@ -35,7 +35,7 @@ library(tidyr)
 # Directory containing inputs from https://montagu.vaccineimpact.org/
 input.dir<-"G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Data/GAVI inputs/201910gavi_v4"
 # Directory for central simulation outputs
-output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/Simulation results"
+output.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Analysis/ConstantFOI"
 # Directory for final PSA outputs
 deliv.dir <- "G:/CTRHS/Modeling_Infections/GAVI MenA predictions/Deliverables/Deliverables 2021"
 # Directory containing R scripts
@@ -46,7 +46,7 @@ script.dir <- "C:/Users/O992928/documents/GAVI MenA predictions/R_programming"
 
 mycountry <- "TCD"
 myregion <- "hyper"
-vacc_program <- "none"
+vacc_program <- "routine"
 vacc_subprogram <- "default"
 
 ### (3) Set up cross-scenario options #########################################
@@ -205,7 +205,10 @@ output.df <- left_join(pop.df2, inc.df3, by=c("year", "AgeInYears"))
 
 # Check overall incidence by years
 by.year <- aggregate(cbind(Pop, Cases)~year, data=output.df, FUN=sum)
-by.year$incidence <- 10000 * by.year$Cases / by.year$Pop
+by.year$incidence <- 100000 * by.year$Cases / by.year$Pop
 
 plot(by.year$year, by.year$incidence)
 
+filename <- paste0("ConstantFOI-", vacc_program, ".csv")
+
+write.csv(output.df, paste0(output.dir, "/", filename), row.names=FALSE)
